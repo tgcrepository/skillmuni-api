@@ -344,7 +344,7 @@ public sealed class LearnerEndpointsTests(LearnerApiFactory api)
 
         Assert.Equal(("Asha Rao", "•••••• 0697", "Pune", "Maharashtra"), (profile.GetProperty("name").GetString(), profile.GetProperty("contact").GetString(), profile.GetProperty("city").GetString(), profile.GetProperty("state").GetString()));
         Assert.True(profile.GetProperty("relocate").GetBoolean());
-        var skills = profile.GetProperty("skills").EnumerateArray().Select(s => (s.GetProperty("name").GetString(), s.GetProperty("evidence").GetString())).ToList();
+        var skills = profile.GetProperty("skills").EnumerateArray().Select(s => (s.GetProperty("name").GetString()!, s.GetProperty("evidence").GetString()!)).ToList();
         Assert.Equal(new[] { ("MS Excel", "verified"), ("Sales", "declared") }, skills);
 
         Assert.Equal("learner-not-found", await (await service.GetAsync($"/internal/learners/{Guid.NewGuid()}/careers-profile")).ProblemCodeAsync(HttpStatusCode.NotFound));
