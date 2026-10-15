@@ -322,6 +322,35 @@ public sealed class LearnerEndpointsTests(LearnerApiFactory api)
     }
 
     [Fact]
+    public async Task Careers_profile_reads_the_quests_and_is_404_without_a_learner()
+    {
+        var client = api.CreateLearnerClient(out var id);
+        await client.PutJsonAsync("/api/v1/me/quests/who-dis/parts/1", new { values = new { firstName = "Asha", lastName = "Rao" }, done = true });
+        await client.PutJsonAsync("/api/v1/me/quests/hit-me-up/parts/3", new { values = new { phone = "9876540697", city = "Pune", region = "Maharashtra" }, done = false });
+        await client.PutJsonAsync("/api/v1/me/quests/pick-your-arc/parts/1", new { values = new { where = new[] { "relocate" } }, done = false });
+        await client.PutJsonAsync("/api/v1/me/quests/your-flex-era/parts/1", new
+        {
+            values = new
+            {
+                skills = new[] { new { id = "excel", name = "MS Excel", level = 2 }, new { id = "sales", name = "Sales", level = 1 } },
+                trophies = new[] { new { name = "Excel cert", verified = true, skills = new[] { "excel" } } },
+            },
+            done = false,
+        });
+
+        var service = api.CreateClient();
+        service.DefaultRequestHeaders.Add("X-Tenant-Id", LearnerApiFactory.Tenant);
+        var profile = await (await service.GetAsync($"/internal/learners/{id}/careers-profile")).JsonAsync(HttpStatusCode.OK);
+
+        Assert.Equal(("Asha Rao", "•••••• 0697", "Pune", "Maharashtra"), (profile.GetProperty("name").GetString(), profile.GetProperty("contact").GetString(), profile.GetProperty("city").GetString(), profile.GetProperty("state").GetString()));
+        Assert.True(profile.GetProperty("relocate").GetBoolean());
+        var skills = profile.GetProperty("skills").EnumerateArray().Select(s => (s.GetProperty("name").GetString(), s.GetProperty("evidence").GetString())).ToList();
+        Assert.Equal(new[] { ("MS Excel", "verified"), ("Sales", "declared") }, skills);
+
+        Assert.Equal("learner-not-found", await (await service.GetAsync($"/internal/learners/{Guid.NewGuid()}/careers-profile")).ProblemCodeAsync(HttpStatusCode.NotFound));
+    }
+
+    [Fact]
     public async Task Events_create_complete_and_erase_the_learner_once_each()
     {
         var id = Guid.NewGuid();
@@ -342,6 +371,11 @@ public sealed class LearnerEndpointsTests(LearnerApiFactory api)
 
         var progress = await (await client.GetAsync($"/internal/learners/{id}/profile-progress")).JsonAsync(HttpStatusCode.OK);
         Assert.Equal(18, progress.GetProperty("total").GetInt32());
+
+        var careers = await (await client.GetAsync($"/internal/learners/{id}/careers-profile")).JsonAsync(HttpStatusCode.OK);
+        Assert.Equal("Ravi Kumar", careers.GetProperty("name").GetString());
+        Assert.Equal(JsonValueKind.Null, careers.GetProperty("relocate").ValueKind);
+        Assert.Equal(0, careers.GetProperty("skills").GetArrayLength());
 
         Assert.Equal(DispatchOutcome.Handled, await api.DeliverAsync("identity.learner.erased", Guid.NewGuid(), new { accountId = id, tenantId = LearnerApiFactory.Tenant }));
         Assert.False(await api.QueryAsync(db => db.Learners.AnyAsync(l => l.Id == id)));
