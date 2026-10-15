@@ -1,4 +1,4 @@
-# Local run: gateway + Identity + Learner + CV + Gamification + Learning + Assessment + MySQL + Service Bus emulator + Redis + Azurite.
+# Local run: gateway + Identity + Learner + CV + Gamification + Assessment + Learning + Muni + Platform + MySQL + Service Bus emulator + Redis + Azurite.
 #   ./scripts/dev-setup.sh && docker compose up --build
 # Frontend: set environment.apiBaseUrl to /api/v1 and proxy /api to http://localhost:5080.
 name: skillmuni
@@ -15,6 +15,8 @@ services:
       GAMIFICATION_DB_PASSWORD: ${GAMIFICATION_DB_PASSWORD:?run scripts/dev-setup.sh}
       ASSESSMENT_DB_PASSWORD: ${ASSESSMENT_DB_PASSWORD:?run scripts/dev-setup.sh}
       LEARNING_DB_PASSWORD: ${LEARNING_DB_PASSWORD:?run scripts/dev-setup.sh}
+      MUNI_DB_PASSWORD: ${MUNI_DB_PASSWORD:?run scripts/dev-setup.sh}
+      PLATFORM_DB_PASSWORD: ${PLATFORM_DB_PASSWORD:?run scripts/dev-setup.sh}
     ports: ["3306:3306"]
     volumes:
       - mysql-data:/var/lib/mysql
@@ -157,7 +159,7 @@ services:
     build:
       context: .
       dockerfile: src/Gateway/SkillMuni.Gateway/Dockerfile
-    depends_on: [identity, learner, cv, gamification, assessment, learning]
+    depends_on: [identity, learner, cv, gamification, assessment, learning, muni, platform]
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       Auth__SigningPublicKeyPem: ${AUTH_PUBLIC_KEY_B64}
@@ -182,5 +184,40 @@ services:
       ServiceBus__ConnectionString: Endpoint=sb://servicebus;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;
       Auth__SigningPublicKeyPem: ${AUTH_PUBLIC_KEY_B64}
 
+  muni:
+    build:
+      context: .
+      dockerfile: src/Services/Muni/Muni.Api/Dockerfile
+    depends_on:
+      mysql:
+        condition: service_healthy
+      servicebus:
+        condition: service_started
+      redis:
+        condition: service_started
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__Muni: server=mysql;port=3306;database=muni;user=muni_svc;password=${MUNI_DB_PASSWORD}
+      ConnectionStrings__Redis: redis:6379
+      ServiceBus__ConnectionString: Endpoint=sb://servicebus;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;
+      Auth__SigningPublicKeyPem: ${AUTH_PUBLIC_KEY_B64}
+      Muni__LearnerBaseAddress: http://learner:8080/
+  platform:
+    build:
+      context: .
+      dockerfile: src/Services/Platform/Platform.Api/Dockerfile
+    depends_on:
+      mysql:
+        condition: service_healthy
+      servicebus:
+        condition: service_started
+      redis:
+        condition: service_started
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__Platform: server=mysql;port=3306;database=platform;user=platform_svc;password=${PLATFORM_DB_PASSWORD}
+      ConnectionStrings__Redis: redis:6379
+      ServiceBus__ConnectionString: Endpoint=sb://servicebus;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;
+      Auth__SigningPublicKeyPem: ${AUTH_PUBLIC_KEY_B64}
 volumes:
   mysql-data:

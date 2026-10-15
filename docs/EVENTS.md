@@ -14,7 +14,7 @@ repeat across courses, so `(courseSlug, moduleSlug)` is the unique key. `briefId
 
 | Event | Publisher | Fields | Consumers → effect |
 |---|---|---|---|
-| `identity.learner.registered` | Identity | accountId, firstName, lastName, market | Learner (create profile), Gamification (player), Assessment, Careers (learner row, lazy otherwise); Learning creates its rows lazily |
+| `identity.learner.registered` | Identity | accountId, firstName, lastName, market | Learner (create profile), Gamification (player), Assessment, Careers (learner row, lazy otherwise); Learning creates its rows lazily; Muni (name and joining date for replies) |
 | `identity.contact.verified` | Identity | accountId, kind, value | Learner |
 | `identity.claim.consented` | Identity | claimId, accountId, shareProgress, verifyCertificate, applyForMe | Learner |
 | `identity.claim.confirmed` | Identity | claimId, accountId | Learner → marks quests 1–5 done and publishes their step and quest events (BR-119). Gamification pays nothing for the claim itself |
@@ -23,7 +23,7 @@ repeat across courses, so `(courseSlug, moduleSlug)` is the unique key. `briefId
 | `identity.data-export.requested` | Identity | accountId | every service with learner data (export, when built) |
 | `identity.learner.erased` | Identity | accountId | every service → erase the learner's rows |
 | `learner.quest.step-completed` | Learner | learnerId, slug, quest, part, paid | Gamification → +20 when `paid` (BR-100/101), key `step:{slug}:{part}` |
-| `learner.quest.completed` | Learner | learnerId, slug, quest, badge | Gamification → +50 (BR-102) + quest badge |
+| `learner.quest.completed` | Learner | learnerId, slug, quest, badge | Gamification → +50 (BR-102) + quest badge; Muni → quests-done count in replies |
 | `learner.profile.task-completed` | Learner | learnerId, task (`photo`, `skills`) | Gamification → +5 photo (BR-108), +10 skills (BR-109), once |
 | `learner.job-profile.completed` | Learner | learnerId | Gamification → +50 mission (BR-110), key `mission:job-profile`; Careers → Launchpad mission tick |
 | `learner.programme.enrolled` | Learner | learnerId, programmeCode, paysStipend | Gamification → +100 once per learner (BR-113), key `programme:once` |
@@ -44,7 +44,9 @@ repeat across courses, so `(courseSlug, moduleSlug)` is the unique key. `briefId
 | `careers.application.withdrawn` | Careers | learnerId, applicationId | — (XP never decreases, BR-115) |
 | `careers.fest.booked` | Careers | learnerId, bookingId, festId | Gamification → +100 on the first (BR-112), key `mission:first-fest-booking` |
 | `careers.fest.cancelled` | Careers | learnerId, bookingId | — |
-| `gamification.xp.awarded` | Gamification | learnerId, totalXp, level, rank, levelStartXp, nextLevelXp, badges, streakDays | Learner (profile header), Careers (Launchpad) |
-| `gamification.badge.earned` | Gamification | learnerId, badgeId, badgeName | — |
+| `gamification.xp.awarded` | Gamification | learnerId, totalXp, level, rank, levelStartXp, nextLevelXp, badges, streakDays | Learner (profile header), Careers (Launchpad), Muni (XP, level, rank, streak in replies) |
+| `gamification.badge.earned` | Gamification | learnerId, badgeId, badgeName | Platform → bell notification, once per badge |
 
-Queues (not topics): `notifications` (Identity → Platform): one message per SMS / email / push to send.
+Queues (not topics): `notifications` (Identity → Platform): one message per SMS / email / push to send. Body
+`{ tenantId, channel: "sms" | "email", to, template, data: { secret, validForMinutes } }`, subject = template, TTL = the
+code's lifetime. Platform records each delivery with the recipient masked and never the secret.

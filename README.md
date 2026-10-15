@@ -12,6 +12,8 @@ Azure Service Bus events through an outbox. Rules: [`CLAUDE.md`](CLAUDE.md).
 | `src/Services/Gamification` | XP ledger, levels, badges, streaks, daily quests, Arena, Rewards — see its [README](src/Services/Gamification/README.md) |
 | `src/Services/Assessment` | Career Drivers (36 pairs, islands, scoring, archetypes, attempts), My Stats assessments — see its [README](src/Services/Assessment/README.md) |
 | `src/Services/Learning` | Learn modules, topics, briefs, quizzes, Lobby feed and first moves, My Stats learning, learning minutes — see its [README](src/Services/Learning/README.md) |
+| `src/Services/Muni` | Muni chat: welcome, keyword-intent replies, reveal, ratings, history with retention — see its [README](src/Services/Muni/README.md) |
+| `src/Services/Platform` | Geo lookup, tenant theme and market config, notifications (bell, preferences, SMS / email sending) — see its [README](src/Services/Platform/README.md) |
 | `src/Services/Learner` | 8 quests, progress, profile + photo, drafts, DigiLocker, programme codes, trophies, ESCO, preferences — see its [README](src/Services/Learner/README.md) |
 | `tests` | Unit tests (Application layer, gateway), integration tests (Testcontainers MySQL), `SkillMuni.Testing` helpers |
 | `deploy` | `bicep/` for Azure, `local/` for docker compose |
@@ -44,7 +46,7 @@ dotnet format SkillMuni.sln --verify-no-changes
 
 ## Migrations
 ```bash
-svc=Identity   # or Learner, Cv, Gamification, Assessment, Learning
+svc=Identity   # or Learner, Cv, Gamification, Assessment, Learning, Muni, Platform
 dotnet ef migrations add <Name> --project src/Services/$svc/$svc.Infrastructure --startup-project src/Services/$svc/$svc.Api -o Persistence/Migrations
 dotnet ef migrations bundle --project src/Services/$svc/$svc.Infrastructure --startup-project src/Services/$svc/$svc.Api -o efbundle-$svc
 ```

@@ -47,7 +47,7 @@ jobs:
         run: |
           dotnet tool install --global dotnet-ef --version 10.0.12
           set -o pipefail
-          for svc in Identity Learner Cv Gamification Assessment Learning; do
+          for svc in Identity Learner Cv Gamification Assessment Learning Muni Platform; do
             echo "has-pending-model-changes: $svc"
             dotnet ef migrations has-pending-model-changes \
               --project src/Services/$svc/$svc.Infrastructure \
@@ -103,6 +103,10 @@ jobs:
         run: docker build -f src/Services/Assessment/Assessment.Api/Dockerfile -t skillmuni-assessment:${{ github.sha }} .
       - name: Learning
         run: docker build -f src/Services/Learning/Learning.Api/Dockerfile -t skillmuni-learning:${{ github.sha }} .
+      - name: Muni
+        run: docker build -f src/Services/Muni/Muni.Api/Dockerfile -t skillmuni-muni:${{ github.sha }} .
+      - name: Platform
+        run: docker build -f src/Services/Platform/Platform.Api/Dockerfile -t skillmuni-platform:${{ github.sha }} .
       - name: Gateway
         run: docker build -f src/Gateway/SkillMuni.Gateway/Dockerfile -t skillmuni-gateway:${{ github.sha }} .
 

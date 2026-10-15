@@ -411,6 +411,97 @@
                     }
                   }
                 ]
+              },
+              {
+                "Name": "muni",
+                "Properties": {
+                  "DeadLetteringOnMessageExpiration": false,
+                  "DefaultMessageTimeToLive": "PT24H",
+                  "LockDuration": "PT1M",
+                  "MaxDeliveryCount": 5,
+                  "ForwardDeadLetteredMessagesTo": "",
+                  "ForwardTo": "",
+                  "RequiresSession": false
+                },
+                "Rules": [
+                  {
+                    "Name": "identity-learner-registered",
+                    "Properties": {
+                      "FilterType": "Correlation",
+                      "CorrelationFilter": {
+                        "Label": "identity.learner.registered"
+                      }
+                    }
+                  },
+                  {
+                    "Name": "identity-learner-erased",
+                    "Properties": {
+                      "FilterType": "Correlation",
+                      "CorrelationFilter": {
+                        "Label": "identity.learner.erased"
+                      }
+                    }
+                  },
+                  {
+                    "Name": "gamification-xp-awarded",
+                    "Properties": {
+                      "FilterType": "Correlation",
+                      "CorrelationFilter": {
+                        "Label": "gamification.xp.awarded"
+                      }
+                    }
+                  },
+                  {
+                    "Name": "learner-quest-completed",
+                    "Properties": {
+                      "FilterType": "Correlation",
+                      "CorrelationFilter": {
+                        "Label": "learner.quest.completed"
+                      }
+                    }
+                  },
+                  {
+                    "Name": "assessment-attempt-submitted",
+                    "Properties": {
+                      "FilterType": "Correlation",
+                      "CorrelationFilter": {
+                        "Label": "assessment.attempt.submitted"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "Name": "platform",
+                "Properties": {
+                  "DeadLetteringOnMessageExpiration": false,
+                  "DefaultMessageTimeToLive": "PT24H",
+                  "LockDuration": "PT1M",
+                  "MaxDeliveryCount": 5,
+                  "ForwardDeadLetteredMessagesTo": "",
+                  "ForwardTo": "",
+                  "RequiresSession": false
+                },
+                "Rules": [
+                  {
+                    "Name": "identity-learner-erased",
+                    "Properties": {
+                      "FilterType": "Correlation",
+                      "CorrelationFilter": {
+                        "Label": "identity.learner.erased"
+                      }
+                    }
+                  },
+                  {
+                    "Name": "gamification-badge-earned",
+                    "Properties": {
+                      "FilterType": "Correlation",
+                      "CorrelationFilter": {
+                        "Label": "gamification.badge.earned"
+                      }
+                    }
+                  }
+                ]
               }
             ]
           }
