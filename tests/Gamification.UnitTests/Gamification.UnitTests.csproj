@@ -12,6 +12,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Services\Gamification\Gamification.Application\Gamification.Application.csproj" />
+    <ProjectReference Include="..\SkillMuni.Testing\SkillMuni.Testing.csproj" />
   </ItemGroup>
   <ItemGroup>
     <Using Include="Xunit" />

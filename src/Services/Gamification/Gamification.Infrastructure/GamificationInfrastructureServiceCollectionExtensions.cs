@@ -36,6 +36,7 @@ public static class GamificationInfrastructureServiceCollectionExtensions
 
         services.AddSkillMuniMessaging<GamificationDbContext>();
         services.AddSkillMuniEventConsumer<GamificationDbContext>();
+        services.AddErasureTombstones<GamificationDbContext>();
         services.AddIntegrationEventHandler<AccountRegistered, AccountRegisteredHandler>(AccountRegistered.Name);
         services.AddIntegrationEventHandler<AccountErased, AccountErasedHandler>(AccountErased.Name);
         services.AddIntegrationEventHandler<QuestStepCompleted, QuestStepHandler>(QuestStepCompleted.Name);

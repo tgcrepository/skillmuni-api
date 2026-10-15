@@ -103,6 +103,33 @@ internal sealed class JobProfileRepository(LearnerDbContext db) : IJobProfileRep
         db.JobProfiles.FirstOrDefaultAsync(j => j.LearnerId == learnerId, cancellationToken);
 
     public void Add(JobProfileSettings settings) => db.JobProfiles.Add(settings);
+
+    /// <remarks>
+    /// Two <c>cv.parse.completed</c> events (or an event and a request) can both find no row. An insert-if-absent
+    /// (<c>ON DUPLICATE KEY UPDATE</c> on <c>ux_job_profiles_learner</c>) lets the first one win without a
+    /// duplicate-key error; everyone then reads the one row, tracked. Interpolated values are sent as parameters.
+    /// </remarks>
+    public async Task<JobProfileSettings> GetOrCreateAsync(JobProfileSettings candidate, CancellationToken cancellationToken)
+    {
+        var existing = await FindAsync(candidate.LearnerId, cancellationToken);
+        if (existing is not null)
+        {
+            return existing;
+        }
+
+        var id = candidate.Id.ToString();
+        var learnerId = candidate.LearnerId.ToString();
+        await db.Database.ExecuteSqlAsync(
+            $"""
+            INSERT INTO job_profiles (id, tenant_id, learner_id, hide_contact, expires_days, share_code, cv_prefill, applied_changes, updated_at)
+            VALUES ({id}, {candidate.TenantId}, {learnerId}, {candidate.HideContact}, {candidate.ExpiresDays}, {candidate.ShareCode}, {candidate.CvPrefillJson}, {candidate.AppliedChangesJson}, {candidate.UpdatedAt})
+            ON DUPLICATE KEY UPDATE id = id
+            """,
+            cancellationToken);
+
+        return await FindAsync(candidate.LearnerId, cancellationToken)
+            ?? throw new InvalidOperationException("The job profile row was not created.");
+    }
 }
 
 internal sealed class TrophyFileRepository(LearnerDbContext db) : ITrophyFileRepository

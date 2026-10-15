@@ -1,5 +1,6 @@
 using Platform.Application.Services;
 using SkillMuni.Common.Messaging;
+using SkillMuni.Common.Privacy;
 
 namespace Platform.Application.Handlers;
 
@@ -17,7 +18,12 @@ public sealed class BadgeEarnedHandler(INotificationService notifications) : IIn
             cancellationToken);
 }
 
-public sealed class LearnerErasedHandler(IPlatformDataEraser eraser) : IIntegrationEventHandler<LearnerErased>
+/// <summary>MISS-08: notifications and preferences go; a tombstone stops a later request or event recreating them.</summary>
+public sealed class LearnerErasedHandler(IPlatformDataEraser eraser, IErasureTombstones tombstones) : IIntegrationEventHandler<LearnerErased>
 {
-    public Task HandleAsync(LearnerErased e, CancellationToken cancellationToken) => eraser.EraseAsync(e.AccountId, cancellationToken);
+    public async Task HandleAsync(LearnerErased e, CancellationToken cancellationToken)
+    {
+        await eraser.EraseAsync(e.AccountId, cancellationToken);
+        await tombstones.MarkErasedAsync(e.AccountId, cancellationToken);
+    }
 }

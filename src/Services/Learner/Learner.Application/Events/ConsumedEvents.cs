@@ -8,27 +8,33 @@ namespace Learner.Application.Events;
 
 /// <summary>From Identity: a new learner account.</summary>
 public sealed record AccountRegistered(Guid AccountId, string FirstName, string LastName, string? Email, string? Phone, string Market, string Source)
-    : IntegrationEvent
+    : IntegrationEvent, ILearnerEvent
 {
     public const string Name = "identity.learner.registered";
 
     public override string EventType => Name;
+
+    Guid ILearnerEvent.LearnerId => AccountId;
 }
 
 /// <summary>From Identity: <c>Kind</c> is <c>phone</c> or <c>email</c>.</summary>
-public sealed record ContactVerified(Guid AccountId, string Kind, string Value) : IntegrationEvent
+public sealed record ContactVerified(Guid AccountId, string Kind, string Value) : IntegrationEvent, ILearnerEvent
 {
     public const string Name = "identity.contact.verified";
 
     public override string EventType => Name;
+
+    Guid ILearnerEvent.LearnerId => AccountId;
 }
 
 /// <summary>From Identity: the learner confirmed an institute profile (claim V4); quests 1–5 count as done.</summary>
-public sealed record ClaimConfirmed(Guid ClaimId, Guid AccountId) : IntegrationEvent
+public sealed record ClaimConfirmed(Guid ClaimId, Guid AccountId) : IntegrationEvent, ILearnerEvent
 {
     public const string Name = "identity.claim.confirmed";
 
     public override string EventType => Name;
+
+    Guid ILearnerEvent.LearnerId => AccountId;
 }
 
 /// <summary>From Identity: MISS-08 erasure.</summary>
@@ -51,7 +57,7 @@ public sealed record XpAwarded(
     int LevelStartXp,
     int NextLevelXp,
     int Badges,
-    int StreakDays) : IntegrationEvent
+    int StreakDays) : IntegrationEvent, ILearnerEvent
 {
     public const string Name = "gamification.xp.awarded";
 
@@ -59,7 +65,7 @@ public sealed record XpAwarded(
 }
 
 /// <summary>From Assessment (expected payload): a Career Drivers attempt scored (A-306).</summary>
-public sealed record AssessmentSubmitted(Guid LearnerId, int Attempt, string ArchetypeName, string ArchetypeSummary) : IntegrationEvent
+public sealed record AssessmentSubmitted(Guid LearnerId, int Attempt, string ArchetypeName, string ArchetypeSummary) : IntegrationEvent, ILearnerEvent
 {
     public const string Name = "assessment.attempt.submitted";
 
@@ -67,7 +73,7 @@ public sealed record AssessmentSubmitted(Guid LearnerId, int Attempt, string Arc
 }
 
 /// <summary>From CV: quest slug → answers read from the learner's CV (A-245). The learner's own answers win.</summary>
-public sealed record CvParsed(Guid CvId, Guid LearnerId, string? Outcome, IReadOnlyDictionary<string, JsonElement> Prefill) : IntegrationEvent
+public sealed record CvParsed(Guid CvId, Guid LearnerId, string? Outcome, IReadOnlyDictionary<string, JsonElement> Prefill) : IntegrationEvent, ILearnerEvent
 {
     public const string Name = "cv.parse.completed";
 

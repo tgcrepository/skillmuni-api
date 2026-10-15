@@ -36,6 +36,7 @@ public static class LearningInfrastructureServiceCollectionExtensions
 
         services.AddSkillMuniMessaging<LearningDbContext>();
         services.AddSkillMuniEventConsumer<LearningDbContext>();
+        services.AddErasureTombstones<LearningDbContext>();
         services.AddIntegrationEventHandler<AccountErased, AccountErasedHandler>(AccountErased.Name);
         services.AddIntegrationEventHandler<AssessmentSubmitted, AssessmentSubmittedHandler>(AssessmentSubmitted.Name);
         return services;

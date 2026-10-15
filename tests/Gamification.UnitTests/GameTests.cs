@@ -268,9 +268,11 @@ public sealed class EngineTests
         var id = await _h.JoinAsync("Asha Rao");
         await StepAsync(id, "who-dis", 1);
 
-        await new AccountErasedHandler(_h.Store).HandleAsync(new AccountErased(id) { TenantId = Tenant }, _ct);
+        var tombstones = new SkillMuni.Testing.FakeErasureTombstones();
+        await new AccountErasedHandler(_h.Store, tombstones).HandleAsync(new AccountErased(id) { TenantId = Tenant }, _ct);
         Assert.Empty(_h.Store.Players);
         Assert.Empty(_h.Store.Ledger);
+        Assert.Contains(id, tombstones.Erased);
     }
 
     [Fact]

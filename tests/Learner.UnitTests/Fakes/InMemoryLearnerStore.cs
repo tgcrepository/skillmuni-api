@@ -89,6 +89,17 @@ public sealed class InMemoryLearnerStore :
 
     public void Add(JobProfileSettings settings) => JobProfiles.Add(settings);
 
+    public Task<JobProfileSettings> GetOrCreateAsync(JobProfileSettings candidate, CancellationToken cancellationToken)
+    {
+        var existing = JobProfiles.FirstOrDefault(j => j.LearnerId == candidate.LearnerId);
+        if (existing is null)
+        {
+            JobProfiles.Add(candidate);
+        }
+
+        return Task.FromResult(existing ?? candidate);
+    }
+
     // Drafts
     Task<Draft?> IDraftRepository.FindAsync(Guid learnerId, string key, CancellationToken cancellationToken) =>
         Task.FromResult(Drafts.FirstOrDefault(d => d.LearnerId == learnerId && d.Key == key));

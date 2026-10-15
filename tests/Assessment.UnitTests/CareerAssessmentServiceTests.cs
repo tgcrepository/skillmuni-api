@@ -173,11 +173,13 @@ public sealed class CareerAssessmentServiceTests
         Assert.Single(_h.Store.Journeys);
 
         await _h.SubmitAsync(AssessmentHarness.All());
-        await new AccountErasedHandler(_h.Store, NullLogger<AccountErasedHandler>.Instance)
+        var tombstones = new SkillMuni.Testing.FakeErasureTombstones();
+        await new AccountErasedHandler(_h.Store, tombstones, NullLogger<AccountErasedHandler>.Instance)
             .HandleAsync(new AccountErased(_h.LearnerId) { TenantId = "skillmuni-in" }, CancellationToken.None);
 
         Assert.Empty(_h.Store.Journeys);
         Assert.Empty(_h.Store.Attempts);
+        Assert.Contains(_h.LearnerId, tombstones.Erased);
     }
 
     [Fact]

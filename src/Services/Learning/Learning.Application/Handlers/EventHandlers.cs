@@ -1,14 +1,19 @@
 using Learning.Domain;
 using SkillMuni.Common.Messaging;
+using SkillMuni.Common.Privacy;
 
 namespace Learning.Application.Handlers;
 
 // The dispatcher applies the event's tenant and saves the handler's changes together with the inbox row.
 
-/// <summary>MISS-08: erase every row Learning holds for the learner.</summary>
-public sealed class AccountErasedHandler(ILearnerDataEraser eraser) : IIntegrationEventHandler<AccountErased>
+/// <summary>MISS-08: erase every row Learning holds for the learner; a tombstone stops a later request or event recreating them.</summary>
+public sealed class AccountErasedHandler(ILearnerDataEraser eraser, IErasureTombstones tombstones) : IIntegrationEventHandler<AccountErased>
 {
-    public Task HandleAsync(AccountErased e, CancellationToken cancellationToken) => eraser.EraseAsync(e.AccountId, cancellationToken);
+    public async Task HandleAsync(AccountErased e, CancellationToken cancellationToken)
+    {
+        await eraser.EraseAsync(e.AccountId, cancellationToken);
+        await tombstones.MarkErasedAsync(e.AccountId, cancellationToken);
+    }
 }
 
 /// <summary>BR-42: the first move "Discover your Career Drivers" is done once the assessment is submitted.</summary>

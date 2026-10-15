@@ -29,7 +29,7 @@ internal sealed class CareersHarness
         Fests = new FestService(FestCatalogue, JobCatalogue, FestViews, States, Store, Store, Store, Learner, Store, Store, TenantContext, Clock, options, NullLogger<FestService>.Instance);
         Launchpad = new LaunchpadService(States, Board, FestViews, FestCatalogue, CareerCatalogue, Store, Store, Learner, Store, Clock, options);
         Matches = new MatchesService(CareerCatalogue, Matcher, States, Store, Learner, Store, TenantContext, Clock, options);
-        Erased = new AccountErasedHandler(Store, Store, Store, NullLogger<AccountErasedHandler>.Instance);
+        Erased = new AccountErasedHandler(Store, Store, Store, Tombstones, NullLogger<AccountErasedHandler>.Instance);
         Assessment = new AssessmentSubmittedHandler(States, Clock);
         JobProfile = new JobProfileCompletedHandler(States, Clock);
     }
@@ -69,6 +69,8 @@ internal sealed class CareersHarness
     public MatchesService Matches { get; }
 
     public AccountErasedHandler Erased { get; }
+
+    public SkillMuni.Testing.FakeErasureTombstones Tombstones { get; } = new();
 
     public AssessmentSubmittedHandler Assessment { get; }
 

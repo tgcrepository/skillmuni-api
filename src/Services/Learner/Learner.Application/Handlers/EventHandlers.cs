@@ -5,6 +5,7 @@ using Learner.Application.Services;
 using Learner.Domain;
 using Microsoft.Extensions.Logging;
 using SkillMuni.Common.Messaging;
+using SkillMuni.Common.Privacy;
 using SkillMuni.Common.Storage;
 using SkillMuni.Common.Tenancy;
 
@@ -121,8 +122,15 @@ public sealed partial class ClaimConfirmedHandler(
     private static partial void LogNoLearner(ILogger logger, Guid learnerId);
 }
 
-/// <summary>MISS-08: files first (so a retry can still find them), then every row.</summary>
-public sealed class AccountErasedHandler(ILearnerDataEraser eraser, IBlobStore blobs, ILogger<AccountErasedHandler> logger)
+/// <summary>
+/// MISS-08: files first (so a retry can still find them), then every row; a tombstone (id + time) stays so the
+/// learner's still-valid token gets 410 and late events are skipped instead of recreating an empty profile.
+/// </summary>
+public sealed class AccountErasedHandler(
+    ILearnerDataEraser eraser,
+    IBlobStore blobs,
+    IErasureTombstones tombstones,
+    ILogger<AccountErasedHandler> logger)
     : IIntegrationEventHandler<AccountErased>
 {
     public async Task HandleAsync(AccountErased e, CancellationToken cancellationToken)
@@ -134,6 +142,7 @@ public sealed class AccountErasedHandler(ILearnerDataEraser eraser, IBlobStore b
         }
 
         await eraser.EraseAsync(e.AccountId, cancellationToken);
+        await tombstones.MarkErasedAsync(e.AccountId, cancellationToken);
         logger.LogInformation("Learner data erased {LearnerId} {Files}", e.AccountId, names.Count);
     }
 }
@@ -175,13 +184,8 @@ public sealed class CvParsedHandler(
     public async Task HandleAsync(CvParsed e, CancellationToken cancellationToken)
     {
         var now = clock.GetUtcNow().UtcDateTime;
-        var settings = await jobProfiles.FindAsync(e.LearnerId, cancellationToken);
-        if (settings is null)
-        {
-            settings = JobProfileSettings.Create(e.TenantId, e.LearnerId, ShareCodes.New(), now);
-            jobProfiles.Add(settings);
-        }
-
+        // Two parse results close together must not both insert the row (duplicate key → redelivery, error log).
+        var settings = await jobProfiles.GetOrCreateAsync(JobProfileSettings.Create(e.TenantId, e.LearnerId, ShareCodes.New(), now), cancellationToken);
         settings.KeepCvRead(e.CvId, JsonSerializer.Serialize(e.Prefill), now);
 
         foreach (var (slug, values) in e.Prefill)

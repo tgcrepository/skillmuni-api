@@ -172,15 +172,9 @@ public sealed class JobProfileService(
 
     private async Task<JobProfileSettings> SettingsAsync(LearnerProfile learner, CancellationToken cancellationToken)
     {
-        var settings = await jobProfiles.FindAsync(learner.Id, cancellationToken);
-        if (settings is null)
-        {
-            settings = JobProfileSettings.Create(tenant.TenantId, learner.Id, ShareCodes.New(), Now);
-            jobProfiles.Add(settings);
-            await unitOfWork.SaveChangesAsync(cancellationToken);
-        }
-
-        return settings;
+        // Created on first use; insert-if-absent so a parallel request or cv.parse.completed can't hit the unique key.
+        return await jobProfiles.FindAsync(learner.Id, cancellationToken)
+            ?? await jobProfiles.GetOrCreateAsync(JobProfileSettings.Create(tenant.TenantId, learner.Id, ShareCodes.New(), Now), cancellationToken);
     }
 
     private async Task<JobProfileDto> BuildAsync(LearnerProfile learner, JobProfileSettings settings, CancellationToken cancellationToken)

@@ -66,6 +66,7 @@ public static class CareersInfrastructureServiceCollectionExtensions
 
         services.AddSkillMuniMessaging<CareersDbContext>();
         services.AddSkillMuniEventConsumer<CareersDbContext>();
+        services.AddErasureTombstones<CareersDbContext>();
         services.AddIntegrationEventHandler<AssessmentSubmitted, AssessmentSubmittedHandler>(AssessmentSubmitted.Name);
         services.AddIntegrationEventHandler<JobProfileCompleted, JobProfileCompletedHandler>(JobProfileCompleted.Name);
         services.AddIntegrationEventHandler<ClaimConfirmed, ClaimConfirmedHandler>(ClaimConfirmed.Name);

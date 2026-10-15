@@ -12,6 +12,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Services\Assessment\Assessment.Application\Assessment.Application.csproj" />
+    <ProjectReference Include="..\SkillMuni.Testing\SkillMuni.Testing.csproj" />
     <ProjectReference Include="..\..\src\Services\Assessment\Assessment.Infrastructure\Assessment.Infrastructure.csproj" />
   </ItemGroup>
   <ItemGroup>

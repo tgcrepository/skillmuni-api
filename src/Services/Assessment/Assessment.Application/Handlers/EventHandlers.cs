@@ -1,6 +1,7 @@
 using Assessment.Domain;
 using Microsoft.Extensions.Logging;
 using SkillMuni.Common.Messaging;
+using SkillMuni.Common.Privacy;
 
 namespace Assessment.Application.Handlers;
 
@@ -18,12 +19,16 @@ public sealed class AccountRegisteredHandler(ICareerJourneyRepository journeys, 
     }
 }
 
-/// <summary>MISS-08: the learner's attempts and journey are deleted.</summary>
-public sealed partial class AccountErasedHandler(IAssessmentDataEraser eraser, ILogger<AccountErasedHandler> logger) : IIntegrationEventHandler<AccountErased>
+/// <summary>MISS-08: the learner's attempts and journey are deleted; a tombstone stops a later request or event recreating them.</summary>
+public sealed partial class AccountErasedHandler(
+    IAssessmentDataEraser eraser,
+    IErasureTombstones tombstones,
+    ILogger<AccountErasedHandler> logger) : IIntegrationEventHandler<AccountErased>
 {
     public async Task HandleAsync(AccountErased e, CancellationToken cancellationToken)
     {
         await eraser.EraseAsync(e.AccountId, cancellationToken);
+        await tombstones.MarkErasedAsync(e.AccountId, cancellationToken);
         LogErased(logger, e.AccountId);
     }
 
