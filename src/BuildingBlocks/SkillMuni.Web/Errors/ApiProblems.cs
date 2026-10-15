@@ -59,8 +59,11 @@ public static class ApiProblems
     /// <summary>An MVC result for an expected failure.</summary>
     public static IActionResult Result(HttpContext http, Error error) => ToResult(From(http, error));
 
-    public static IActionResult ToResult(ProblemDetails problem) =>
-        new ObjectResult(problem) { StatusCode = problem.Status, ContentTypes = { ContentType } };
+    /// <remarks>
+    /// Written directly rather than as an <see cref="ObjectResult"/>: a controller's <c>[Produces("application/json")]</c>
+    /// filter rewrites an ObjectResult's content types, and the frontend expects <c>application/problem+json</c>.
+    /// </remarks>
+    public static IActionResult ToResult(ProblemDetails problem) => new ProblemActionResult(problem);
 
     /// <summary>Writes the problem straight to the response (middleware, auth events).</summary>
     public static Task WriteAsync(HttpContext http, Error error, CancellationToken cancellationToken = default) =>
@@ -93,4 +96,11 @@ public static class ApiProblems
         503 => "Service Unavailable",
         _ => "Internal Server Error",
     };
+}
+
+/// <summary>Writes a <see cref="ProblemDetails"/> as <c>application/problem+json</c>, untouched by content negotiation.</summary>
+internal sealed class ProblemActionResult(ProblemDetails problem) : IActionResult
+{
+    public Task ExecuteResultAsync(ActionContext context) =>
+        ApiProblems.WriteAsync(context.HttpContext, problem, context.HttpContext.RequestAborted);
 }
