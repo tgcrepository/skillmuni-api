@@ -75,8 +75,7 @@ public sealed class LearnerEndpointsTests(LearnerApiFactory api)
         };
         await api.DeliverAsync("cv.parse.completed", Guid.NewGuid(), new { cvId = Guid.NewGuid(), learnerId = id, outcome = "ok", prefill, tenantId = LearnerApiFactory.Tenant });
 
-        using var form = new MultipartFormDataContent { { new ByteArrayContent("%PDF-1.7
-"u8.ToArray()), "cv", "cv.pdf" } };
+        using var form = new MultipartFormDataContent { { new ByteArrayContent("%PDF-1.7\n"u8.ToArray()), "cv", "cv.pdf" } };
         var changes = await (await client.PostAsync("/api/v1/job-profile/cv", form)).JsonAsync(HttpStatusCode.OK);
         var change = changes.EnumerateArray().Single(c => c.GetProperty("kind").GetString() == "skill");
         Assert.Equal(("skill-freshdesk", "add"), (change.GetProperty("id").GetString(), change.GetProperty("suggest").GetString()));
