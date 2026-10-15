@@ -185,17 +185,35 @@ public sealed partial class CvParseJob(
         return extract.Work.Count == 0 ? ("no-work-history", null) : (null, null);
     }
 
-    private static string LanguageName(string code)
+    // ISO 639-1 codes the text reader reports → English names. Images run in globalization-invariant mode,
+    // so CultureInfo can't name languages; unknown codes fall back to the code itself.
+    private static readonly IReadOnlyDictionary<string, string> LanguageNames = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
     {
-        try
-        {
-            return System.Globalization.CultureInfo.GetCultureInfo(code).EnglishName;
-        }
-        catch (System.Globalization.CultureNotFoundException)
-        {
-            return code;
-        }
-    }
+        ["en"] = "English",
+        ["hi"] = "Hindi",
+        ["mr"] = "Marathi",
+        ["bn"] = "Bengali",
+        ["ta"] = "Tamil",
+        ["te"] = "Telugu",
+        ["kn"] = "Kannada",
+        ["ml"] = "Malayalam",
+        ["gu"] = "Gujarati",
+        ["pa"] = "Punjabi",
+        ["ur"] = "Urdu",
+        ["or"] = "Odia",
+        ["as"] = "Assamese",
+        ["af"] = "Afrikaans",
+        ["zu"] = "Zulu",
+        ["xh"] = "Xhosa",
+        ["st"] = "Sesotho",
+        ["tn"] = "Setswana",
+        ["fr"] = "French",
+        ["de"] = "German",
+        ["es"] = "Spanish",
+    };
+
+    private static string LanguageName(string code) =>
+        LanguageNames.TryGetValue(code.Split('-')[0], out var name) ? name : code;
 
     private async Task StepAsync(CvDocument document, int step, string quip, CancellationToken cancellationToken)
     {

@@ -2,9 +2,9 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using SkillMuni.Common.Results;
+using SkillMuni.Common.Security;
 using SkillMuni.Web.Auth;
 using SkillMuni.Web.Errors;
-using SkillMuni.Common.Security;
 
 namespace Microsoft.Extensions.DependencyInjection;
 

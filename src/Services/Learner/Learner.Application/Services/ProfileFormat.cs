@@ -44,7 +44,7 @@ internal static class ProfileFormat
         dob is { } d ? $"•• ••• {d.Year.ToString(CultureInfo.InvariantCulture)}" : NotAdded;
 
     public static string DisplayDob(DateOnly? dob) =>
-        dob?.ToString("d MMM yyyy", CultureInfo.GetCultureInfo("en-GB")) ?? string.Empty;
+        dob?.ToString("d MMM yyyy", CultureInfo.InvariantCulture) ?? string.Empty;
 
     public static string IsoDate(DateOnly? date) => date?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) ?? string.Empty;
 

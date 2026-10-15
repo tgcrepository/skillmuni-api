@@ -9,7 +9,8 @@ namespace Cv.Application.Services;
 /// </summary>
 public static class CvSummaryBuilder
 {
-    private static readonly CultureInfo English = CultureInfo.GetCultureInfo("en-GB");
+    // Invariant culture: English month names and title case without ICU (images run in globalization-invariant mode).
+    private static readonly CultureInfo English = CultureInfo.InvariantCulture;
 
     public static CvSummaryDto Build(CvExtract extract, string market, DateTime now)
     {
