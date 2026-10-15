@@ -5,8 +5,11 @@ public sealed class IdentityServiceOptions
 {
     public const string Section = "Identity";
 
-    /// <summary>Wrong attempts allowed per code before 429 too-many-tries.</summary>
-    public int TriesPerCode { get; set; } = 5;
+    /// <summary>
+    /// BR-11 / A-312: the hidden anti-abuse limit. People get unlimited visible tries with no count shown; this many
+    /// wrong codes in a row returns 429 too-many-tries. <c>triesLeft</c> in payloads is counted from it.
+    /// </summary>
+    public int TriesPerCode { get; set; } = 20;
 
     public TimeSpan CodeLifetime { get; set; } = TimeSpan.FromMinutes(10);
 
@@ -26,10 +29,6 @@ public sealed class IdentityServiceOptions
 
     /// <summary>A just-rotated refresh token still works this long (two tabs refreshing at once).</summary>
     public TimeSpan RefreshGrace { get; set; } = TimeSpan.FromSeconds(30);
-
-    public int MaxFailedPasswords { get; set; } = 10;
-
-    public TimeSpan PasswordLockout { get; set; } = TimeSpan.FromMinutes(15);
 
     public TimeSpan ResetLinkLifetime { get; set; } = TimeSpan.FromMinutes(30);
 

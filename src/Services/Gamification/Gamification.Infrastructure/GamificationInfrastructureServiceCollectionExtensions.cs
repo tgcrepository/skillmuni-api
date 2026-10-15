@@ -37,7 +37,6 @@ public static class GamificationInfrastructureServiceCollectionExtensions
         services.AddSkillMuniMessaging<GamificationDbContext>();
         services.AddSkillMuniEventConsumer<GamificationDbContext>();
         services.AddIntegrationEventHandler<AccountRegistered, AccountRegisteredHandler>(AccountRegistered.Name);
-        services.AddIntegrationEventHandler<ClaimConfirmed, ClaimConfirmedHandler>(ClaimConfirmed.Name);
         services.AddIntegrationEventHandler<AccountErased, AccountErasedHandler>(AccountErased.Name);
         services.AddIntegrationEventHandler<QuestStepCompleted, QuestStepHandler>(QuestStepCompleted.Name);
         services.AddIntegrationEventHandler<QuestCompleted, QuestCompletedHandler>(QuestCompleted.Name);
@@ -51,14 +50,20 @@ public static class GamificationInfrastructureServiceCollectionExtensions
         services.AddIntegrationEventHandler<QuizSubmitted, QuizSubmittedHandler>(QuizSubmitted.Name);
         services.AddIntegrationEventHandler<ModuleCompleted, ModuleCompletedHandler>(ModuleCompleted.Name);
         services.AddIntegrationEventHandler<CourseCompleted, CourseCompletedHandler>(CourseCompleted.Name);
+        services.AddIntegrationEventHandler<JobProfileCompleted, JobProfileCompletedHandler>(JobProfileCompleted.Name);
+        services.AddIntegrationEventHandler<IslandCleared, IslandClearedHandler>(IslandCleared.Name);
+        services.AddIntegrationEventHandler<FirstMovesClaimed, FirstMovesClaimedHandler>(FirstMovesClaimed.Name);
+        services.AddIntegrationEventHandler<ApplicationSent, ApplicationSentHandler>(ApplicationSent.Name);
+        services.AddIntegrationEventHandler<FestBooked, FestBookedHandler>(FestBooked.Name);
         return services;
     }
 
-    /// <summary>Every event type the "gamification" subscription receives (kept with the handler list).</summary>
+    /// <summary>Every event type the "gamification" subscription receives (kept with the handler list and main.bicep).</summary>
     public static readonly IReadOnlyList<string> SubscribedEvents =
     [
-        AccountRegistered.Name, ClaimConfirmed.Name, AccountErased.Name, QuestStepCompleted.Name, QuestCompleted.Name,
+        AccountRegistered.Name, AccountErased.Name, QuestStepCompleted.Name, QuestCompleted.Name,
         ProfileTaskCompleted.Name, ProgrammeEnrolled.Name, FeedbackSent.Name, PhotoChanged.Name, AssessmentSubmitted.Name,
         LearningActivity.Name, BriefCompleted.Name, QuizSubmitted.Name, ModuleCompleted.Name, CourseCompleted.Name,
+        JobProfileCompleted.Name, IslandCleared.Name, FirstMovesClaimed.Name, ApplicationSent.Name, FestBooked.Name,
     ];
 }

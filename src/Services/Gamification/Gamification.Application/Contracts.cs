@@ -24,9 +24,18 @@ public sealed record ArenaMeDto(int Rank, int Xp, int RankToday, int Streak, str
 
 public sealed record RankUpDto(int To, string Passed);
 
-public sealed record VoucherDto(string Discount, string Title, int Cost, int Ready);
+/// <summary>
+/// A-317: coins and vouchers are removed for launch. arena.api.ts still reads <c>rewards</c>, so it is always
+/// <c>{ coins: 0, voucher: null }</c>.
+/// </summary>
+public sealed record ArenaRewardsDto
+{
+    public static readonly ArenaRewardsDto None = new();
 
-public sealed record ArenaRewardsDto(int Coins, VoucherDto? Voucher);
+    public int Coins => 0;
+
+    public object? Voucher => null;
+}
 
 public sealed record ArenaBoardDto(
     string Scope,
@@ -34,7 +43,6 @@ public sealed record ArenaBoardDto(
     IReadOnlyList<ArenaPlayerDto> Players,
     ArenaMeDto Me,
     IReadOnlyList<string> Week,
-    int StreakBonus,
     int PromotionRank,
     string League,
     RankUpDto? RankUp,
@@ -44,19 +52,29 @@ public sealed record CheerRequest(bool On);
 
 public sealed record CheersDto(int Cheers);
 
-public sealed record DailyQuestDto(string Id, string Icon, string Title, string ProgressLabel, double Percent, int Xp, bool Done, string Link);
+public sealed record DailyQuestDto(string Id, string Icon, string? Image, string Title, string ProgressLabel, double Percent, int Xp, bool Done, string Link);
 
 public sealed record DailyQuestsDto(DateTime ResetsAt, IReadOnlyList<DailyQuestDto> Items);
 
-public sealed record BadgeProgressDto(string Id, string Name, string Icon, string ProgressLabel, double Percent);
+public sealed record BadgeProgressDto(string Id, string Name, string Icon, string? Image, string ProgressLabel, double Percent);
 
-public sealed record ShowcaseSlotDto(string Id, string Name, string Icon, string Rarity);
+public sealed record ShowcaseSlotDto(string Id, string Name, string Icon, string? Image, string Rarity);
 
 public sealed record RewardsPlayerDto(string Name, string Initials, string Title, string? PhotoUrl, int Level, int Xp, int NextLevelXp, int? BatchRank);
 
 public sealed record StreakDto(int Days, IReadOnlyList<string> Week);
 
-public sealed record WalletDto(int Xp, int Coins, int CoinsEarned, int CoinsSpent, int Credits);
+/// <summary>A-317 / D-10: coins and credits are always 0 in Phase 1; the fields stay because stats.api.ts reads them.</summary>
+public sealed record WalletDto(int Xp)
+{
+    public int Coins => 0;
+
+    public int CoinsEarned => 0;
+
+    public int CoinsSpent => 0;
+
+    public int Credits => 0;
+}
 
 public sealed record RewardsBadgesDto(int Earned, int Total, IReadOnlyList<ShowcaseSlotDto?> Showcase, IReadOnlyList<BadgeProgressDto> UpNext);
 
@@ -80,6 +98,7 @@ public sealed record BadgeDto(
     string Id,
     string Name,
     string Icon,
+    string? Image,
     string Category,
     string Rarity,
     string State,
@@ -95,10 +114,16 @@ public sealed record BadgeDto(
 /// <summary>stats.api.ts BadgeCatalogue (API-132/133).</summary>
 public sealed record BadgeCatalogueDto(int Earned, int Total, IReadOnlyList<BadgeDto> Badges);
 
-public sealed record ShowcaseRequest(IReadOnlyList<string> Ids);
+public sealed record ShowcaseRequest(IReadOnlyList<string>? Ids);
+
+/// <summary>API-001 query: <c>scope</c> everyone · batch · friends; <c>period</c> week · month · all.</summary>
+public sealed record ArenaQuery(string? Scope, string? Period);
 
 /// <summary>MISS-01: one ledger line.</summary>
 public sealed record XpEntryDto(string Reason, string Label, string SourceId, int Xp, DateTime OccurredAt);
 
-/// <summary>MISS-04.</summary>
-public sealed record StreakDetailDto(int Days, int Best, IReadOnlyList<string> Week, int Bonus);
+/// <summary>MISS-04. Streaks earn no XP (BR-139), so there is no bonus field.</summary>
+public sealed record StreakDetailDto(int Days, int Best, IReadOnlyList<string> Week);
+
+/// <summary>progress.api.ts LearnerProgress (API-125): quest progress plus the one XP total from the ledger (BR-138).</summary>
+public sealed record LearnerProgressDto(int Completed, int PartsDone, int Xp, int Badges, int Level, string Rank, int Target);

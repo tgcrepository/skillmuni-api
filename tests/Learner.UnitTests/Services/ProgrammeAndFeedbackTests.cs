@@ -140,6 +140,7 @@ public sealed class ProgrammeAndFeedbackTests : IAsyncLifetime
         Assert.Equal(5, (await _h.Feedback.SendAsync(who, request, _ct)).Xp);
 
         Assert.Equal(3, _h.Store.Feedback.Count);
-        Assert.Equal(new[] { true, false, true }, _h.Store.EventsOf<FeedbackSent>().Select(e => e.EarnsXp));
+        // Every feedback is published; Gamification decides the +5 from its own ledger (BR-114).
+        Assert.Equal(3, _h.Store.EventsOf<FeedbackSent>().Count());
     }
 }

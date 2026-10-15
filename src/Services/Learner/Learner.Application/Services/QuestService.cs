@@ -28,6 +28,7 @@ public sealed partial class QuestService(
     IQuestAnswersRepository answers,
     IProgressService progress,
     QuestCatalog catalog,
+    IJobProfileCompletion jobProfile,
     IOutbox outbox,
     IUnitOfWork unitOfWork,
     ITenantContext tenant,
@@ -85,15 +86,23 @@ public sealed partial class QuestService(
             learner.Rename(first, AnswersJson.ReadString(request.Values, "lastName") ?? learner.LastName, now);
         }
 
-        // A-249: +20 the first time a step of the quest in progress is done; skipped steps send xp: false.
-        // A-168: bonusXp (extras) earns nothing and is ignored.
-        if (request.Done && learner.RecordPartDone(quest.Number, part, now) && request.Xp != false)
+        // BR-100: +20 the first time a step of the quest in progress is done. BR-101: an all-optional step pays only
+        // when something was added; "Skip for now" (xp: false, <key>Skipped) or an empty Next pays 0 and, since the
+        // step is then done, can never pay later. Gamification counts the step either way. A-168: bonusXp is ignored.
+        if (request.Done && learner.RecordPartDone(quest.Number, part, now))
         {
-            outbox.Add(new QuestStepCompleted(who.Id, slug, quest.Number, part) { TenantId = tenant.TenantId });
-            learner.RecordAwardedXp(options.Value.Xp.QuestStep, now);
-            LogStep(logger, who.Id, quest.Number, part);
+            var step = quest.Parts[part - 1];
+            var paid = !step.Optional || (request.Xp != false && !AnswersJson.IsSkipped(merged, step.Key) && AnswersJson.HasContent(request.Values));
+            outbox.Add(new QuestStepCompleted(who.Id, slug, quest.Number, part, paid) { TenantId = tenant.TenantId });
+            if (paid)
+            {
+                learner.RecordAwardedXp(options.Value.Xp.QuestStep, now);
+            }
+
+            LogStep(logger, who.Id, quest.Number, part, paid);
         }
 
+        await jobProfile.CheckAsync(learner, slug, merged, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
         return Result.Success();
     }
@@ -119,6 +128,7 @@ public sealed partial class QuestService(
             earned = options.Value.Xp.QuestComplete;
             outbox.Add(new QuestCompleted(who.Id, slug, quest.Number, quest.Badge) { TenantId = tenant.TenantId });
             learner.RecordAwardedXp(earned, now);
+            await jobProfile.CheckAsync(learner, null, null, cancellationToken);
             await unitOfWork.SaveChangesAsync(cancellationToken);
             LogCompleted(logger, who.Id, quest.Number);
         }
@@ -126,8 +136,8 @@ public sealed partial class QuestService(
         return new QuestCompletionDto(earned, progress.For(learner));
     }
 
-    [LoggerMessage(Level = LogLevel.Information, Message = "Quest step done {LearnerId} {Quest} {Part}")]
-    private static partial void LogStep(ILogger logger, Guid learnerId, int quest, int part);
+    [LoggerMessage(Level = LogLevel.Information, Message = "Quest step done {LearnerId} {Quest} {Part} {Paid}")]
+    private static partial void LogStep(ILogger logger, Guid learnerId, int quest, int part, bool paid);
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Quest completed {LearnerId} {Quest}")]
     private static partial void LogCompleted(ILogger logger, Guid learnerId, int quest);

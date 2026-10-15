@@ -87,6 +87,9 @@ public sealed class LearnerProfile : Entity
 
     public string? ArchetypeSummary { get; private set; }
 
+    /// <summary>When the Job Profile first reached 100% (BR-110; the event is published once).</summary>
+    public DateTime? JobProfileCompletedAt { get; private set; }
+
     public DateTime JoinedAt { get; private set; }
 
     public DateTime UpdatedAt { get; private set; }
@@ -152,15 +155,33 @@ public sealed class LearnerProfile : Entity
         return true;
     }
 
-    /// <summary>A confirmed institute claim pre-fills quests 1–5.</summary>
-    public void FastForwardQuests(int questNumber, DateTime now)
+    /// <summary>A confirmed institute claim pre-fills quests 1–5 (BR-119).</summary>
+    /// <returns>The quests newly counted as done, in order (empty when they already were).</returns>
+    public IReadOnlyList<int> FastForwardQuests(int questNumber, DateTime now)
     {
-        if (questNumber > QuestsCompleted)
+        if (questNumber <= QuestsCompleted)
         {
-            QuestsCompleted = questNumber;
-            PartsDone = 0;
-            UpdatedAt = now;
+            return [];
         }
+
+        var done = Enumerable.Range(QuestsCompleted + 1, questNumber - QuestsCompleted).ToList();
+        QuestsCompleted = questNumber;
+        PartsDone = 0;
+        UpdatedAt = now;
+        return done;
+    }
+
+    /// <returns>True the first time the Job Profile reaches 100%.</returns>
+    public bool MarkJobProfileComplete(DateTime now)
+    {
+        if (JobProfileCompletedAt is not null)
+        {
+            return false;
+        }
+
+        JobProfileCompletedAt = now;
+        UpdatedAt = now;
+        return true;
     }
 
     /// <returns>True when this is the first photo (a strength task).</returns>

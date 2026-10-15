@@ -171,10 +171,9 @@ public sealed class LoginService(
             return IdentityErrors.AccountLocked;
         }
 
+        // B-46: no lock for wrong passwords (the BRD has none); the gateway's per-IP and per-account limits apply.
         if (!passwords.Verify(account.PasswordHash, request.Password))
         {
-            account.RecordFailedPassword(now, _options.MaxFailedPasswords, _options.PasswordLockout);
-            await unitOfWork.SaveChangesAsync(cancellationToken);
             return IdentityErrors.WrongCredentials;
         }
 

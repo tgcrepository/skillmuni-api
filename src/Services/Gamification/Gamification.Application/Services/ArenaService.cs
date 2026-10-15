@@ -136,11 +136,10 @@ public sealed class ArenaService(
             rows,
             meDto,
             PlayerViews.Week(today, days),
-            arena.StreakBonus,
             arena.PromotionRank,
             arena.League,
             rankUp,
-            new ArenaRewardsDto(0, null));
+            ArenaRewardsDto.None);
     }
 
     public async Task<Result<CheersDto>> CheerAsync(Guid learnerId, Guid playerId, bool on, CancellationToken cancellationToken)

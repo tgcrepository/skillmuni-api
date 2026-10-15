@@ -13,7 +13,11 @@ internal sealed partial class IdentityAccountDirectory(HttpClient http, ITenantC
     {
         try
         {
-            using var request = new HttpRequestMessage(HttpMethod.Get, $"internal/accounts/email-owner?email={Uri.EscapeDataString(email)}");
+            // POST with the email in the body: no personal data in URLs (they end up in logs).
+            using var request = new HttpRequestMessage(HttpMethod.Post, "internal/accounts/email-owner")
+            {
+                Content = JsonContent.Create(new { email }),
+            };
             request.Headers.Add("X-Tenant-Id", tenant.TenantId);
             using var response = await http.SendAsync(request, cancellationToken);
             if (response.StatusCode == HttpStatusCode.NotFound)

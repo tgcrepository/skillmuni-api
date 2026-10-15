@@ -5,8 +5,11 @@ namespace Learner.Application.Events;
 // Events Learner publishes. Gamification credits XP and badges from them (once per reason + source id);
 // payloads carry ids, never answers or contact details.
 
-/// <summary>A quest step done for the first time, in the quest in progress (A-249 step XP).</summary>
-public sealed record QuestStepCompleted(Guid LearnerId, string Slug, int Quest, int Part) : IntegrationEvent
+/// <summary>
+/// A quest step done for the first time, in the quest in progress. <see cref="Paid"/> is false for an all-optional step
+/// finished with nothing added (BR-101): Gamification counts it but pays nothing, now or later.
+/// </summary>
+public sealed record QuestStepCompleted(Guid LearnerId, string Slug, int Quest, int Part, bool Paid) : IntegrationEvent
 {
     public const string Name = "learner.quest.step-completed";
 
@@ -37,10 +40,18 @@ public sealed record ProgrammeEnrolled(Guid LearnerId, string ProgrammeCode, boo
     public override string EventType => Name;
 }
 
-/// <summary>A-274. <see cref="EarnsXp"/> is true at most once per 30 days.</summary>
-public sealed record FeedbackSent(Guid LearnerId, int Mood, bool EarnsXp) : IntegrationEvent
+/// <summary>BR-114 / A-274: Gamification decides whether it pays (at most once per 30 days).</summary>
+public sealed record FeedbackSent(Guid LearnerId, int Mood) : IntegrationEvent
 {
     public const string Name = "learner.feedback.sent";
+
+    public override string EventType => Name;
+}
+
+/// <summary>BR-110: the Job Profile reached 100% for the first time (Gamification +50, Careers' Launchpad mission).</summary>
+public sealed record JobProfileCompleted(Guid LearnerId) : IntegrationEvent
+{
+    public const string Name = "learner.job-profile.completed";
 
     public override string EventType => Name;
 }

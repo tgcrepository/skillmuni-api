@@ -21,11 +21,14 @@ public interface IGameEngine
     /// <returns>The XP credited: 0 when this reason + source already paid.</returns>
     Task<int> AwardAsync(Player player, string reason, string sourceId, int xp, CancellationToken cancellationToken);
 
-    /// <summary>Counts today as active (streak calendar) without crediting XP.</summary>
-    Task MarkActiveAsync(Player player, CancellationToken cancellationToken);
+    /// <summary>
+    /// §4.4 / B-45: counts <paramref name="day"/> as a streak day (a brief quiz submitted for the first time that day).
+    /// No XP (BR-139). A day older than the last streak day (a late event) changes nothing.
+    /// </summary>
+    Task MarkStreakDayAsync(Player player, DateOnly day, CancellationToken cancellationToken);
 
-    /// <summary>Moves today's daily quests of this kind; a completed one credits its XP.</summary>
-    Task ProgressDailyAsync(Player player, string kind, int amount, CancellationToken cancellationToken);
+    /// <summary>Moves the daily quests of this kind for <paramref name="day"/>; a completed one credits its XP.</summary>
+    Task ProgressDailyAsync(Player player, string kind, int amount, DateOnly day, CancellationToken cancellationToken);
 
     /// <summary>Awards every badge whose rule is now met and queues the totals event. Call last.</summary>
     Task FinishAsync(Player player, CancellationToken cancellationToken);
@@ -33,6 +36,9 @@ public interface IGameEngine
     LevelInfo LevelFor(int xp);
 
     DateOnly Today(Player player);
+
+    /// <summary>The learner's local date of an event (its <c>occurredAt</c>; now when the publisher left it empty).</summary>
+    DateOnly DayOf(Player player, DateTime occurredAtUtc);
 
     TimeZoneInfo TimeZone(Player player);
 }
@@ -80,24 +86,22 @@ public sealed partial class GameEngine(
         ledger.Add(XpEntry.Credit(player.TenantId, player.Id, reason, sourceId, xp, Now));
         player.AddXp(xp, Now);
         _changed.Add(player.Id);
-        await MarkActiveAsync(player, cancellationToken);
         LogAwarded(logger, player.Id, reason, xp);
         return xp;
     }
 
-    public Task MarkActiveAsync(Player player, CancellationToken cancellationToken)
+    public Task MarkStreakDayAsync(Player player, DateOnly day, CancellationToken cancellationToken)
     {
-        var today = Today(player);
-        if (player.MarkActive(today, Now))
+        if (player.MarkActive(day, Now))
         {
-            activity.Add(ActiveDay.On(player.TenantId, player.Id, today));
+            activity.Add(ActiveDay.On(player.TenantId, player.Id, day));
             _changed.Add(player.Id);
         }
 
         return Task.CompletedTask;
     }
 
-    public async Task ProgressDailyAsync(Player player, string kind, int amount, CancellationToken cancellationToken)
+    public async Task ProgressDailyAsync(Player player, string kind, int amount, DateOnly day, CancellationToken cancellationToken)
     {
         var quests = Rules.Dailies().Where(q => q.Kind == kind).ToList();
         if (quests.Count == 0 || amount <= 0)
@@ -105,20 +109,19 @@ public sealed partial class GameEngine(
             return;
         }
 
-        var today = Today(player);
-        var existing = await activity.ListDailyAsync(player.Id, today, cancellationToken);
+        var existing = await activity.ListDailyAsync(player.Id, day, cancellationToken);
         foreach (var quest in quests)
         {
             var progress = existing.FirstOrDefault(p => p.QuestId == quest.Id);
             if (progress is null)
             {
-                progress = DailyProgress.Start(player.TenantId, player.Id, today, quest.Id);
+                progress = DailyProgress.Start(player.TenantId, player.Id, day, quest.Id);
                 activity.Add(progress);
             }
 
             if (progress.Add(amount, quest.Target))
             {
-                await AwardAsync(player, $"daily.{quest.Id}", today.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture), quest.Xp, cancellationToken);
+                await AwardAsync(player, $"daily.{quest.Id}", day.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture), quest.Xp, cancellationToken);
             }
         }
     }
@@ -127,7 +130,10 @@ public sealed partial class GameEngine(
     {
         var earned = await awards.ListAsync(player.Id, cancellationToken);
         var catalogue = BadgeCatalogue.All(Rules.QuestBadges());
-        foreach (var badge in catalogue.Where(b => b.Tracked && !earned.ContainsKey(b.Id)))
+
+        // §4.3: Phase 1 awards the quest badges only; catalogue badges wait for Gamification:Badges:AwardCatalogue.
+        var awardable = catalogue.Where(b => b.Tracked && !earned.ContainsKey(b.Id) && (b.IsQuest || Rules.Badges.AwardCatalogue));
+        foreach (var badge in awardable)
         {
             if (BadgeProgress.Value(player, badge, Rules) >= badge.Goal)
             {
@@ -159,8 +165,13 @@ public sealed partial class GameEngine(
 
     public TimeZoneInfo TimeZone(Player player) => Rules.TimeZoneFor(player.Market);
 
-    public DateOnly Today(Player player) =>
-        DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(Now, TimeZone(player)));
+    public DateOnly Today(Player player) => DayOf(player, Now);
+
+    public DateOnly DayOf(Player player, DateTime occurredAtUtc)
+    {
+        var at = occurredAtUtc == default ? Now : DateTime.SpecifyKind(occurredAtUtc, DateTimeKind.Utc);
+        return DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(at, TimeZone(player)));
+    }
 
     [LoggerMessage(Level = LogLevel.Information, Message = "XP awarded {LearnerId} {Reason} {Xp}")]
     private static partial void LogAwarded(ILogger logger, Guid learnerId, string reason, int xp);
