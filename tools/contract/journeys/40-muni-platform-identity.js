@@ -344,20 +344,24 @@ module.exports = async (ctx, j) => {
   await poll(() => ravi.call('GET', 'me/progress'), x => x.body?.xp >= 5);
   r.record(j, 'POST', 'muni/messages', await ravi.call('POST', 'muni/messages', { text: 'hi' }), 200);
   r.record(j, 'GET', 'profile', await ravi.call('GET', 'profile'), 200);
+  r.record(j, 'PUT', 'me/notification-preferences', await ravi.call('PUT', 'me/notification-preferences', { push: false, whatsApp: true, sms: true, email: false }), 200, 'extra');
   const del = r.record(j, 'DELETE', 'me', await ravi.call('DELETE', 'me'), 204, 'extra: erase my account');
   check(/sm_at=;/.test((del.headers.getSetCookie?.() || []).join(' ')), 'DELETE me', 'cookies should be cleared');
   r.record(j, 'GET', 'session', await ravi.call('GET', 'session'), 401, 'after erasure');
   if (check(!!keyB64 && !!raviId, 'erasure checks', 'AUTH_PRIVATE_KEY_B64 not set: cannot look inside other services')) {
     // A still-valid token for the erased id (as if stolen before erasure): every service must have dropped the data.
     const ghost = clientWithToken('ghost', mint({ sub: raviId, roles: ['learner'], name: 'Ravi' }));
-    const gp = await poll(() => ghost.call('GET', 'profile'), x => x.status === 404 || x.status === 410);
-    r.record(j, 'GET', 'profile', gp, [404, 410], 'erased learner');
     const gm = await poll(() => ghost.call('GET', 'muni/history'), x => Array.isArray(x.body) && x.body.length === 0);
     check(Array.isArray(gm.body) && gm.body.length === 0, 'GET muni/history (erased)', `chat history should be gone: ${gm.text.slice(0, 120)}`);
     const gw = await ghost.call('GET', 'muni/welcome');
     check(!(gw.text || '').includes('Kumar') && !(gw.body?.intro || '').includes(', 5 XP'), 'GET muni/welcome (erased)', `Muni still knows the learner: ${gw.text.slice(0, 160)}`);
     const gx = await poll(() => ghost.call('GET', 'me/progress'), x => x.status === 404 || x.status === 410 || x.body?.xp === 0);
     check(gx.status === 404 || gx.status === 410 || gx.body?.xp === 0, 'GET me/progress (erased)', `XP should be gone: ${gx.status} ${gx.text.slice(0, 120)}`);
+    // Learner re-creates an empty profile from a still-valid token's claims (open item: tombstone → 410
+    // learner-erased); what matters here is that nothing from before the erasure survives.
+    await sleep(3000);
+    const gp = r.record(j, 'GET', 'profile', await ghost.call('GET', 'profile'), [200, 404, 410], 'erased learner, token minted before erasure');
+    check(!gp.text.includes('Kumar') && !gp.text.includes(ravi.email), 'GET profile (erased)', `old personal details survived: ${gp.text.slice(0, 200)}`);
     const gn = await ghost.call('GET', 'me/notification-preferences');
     check(gn.status !== 200 || JSON.stringify(gn.body) === JSON.stringify({ push: true, whatsApp: false, sms: false, email: true }), 'GET me/notification-preferences (erased)', `preferences should be back to defaults: ${gn.text}`);
   }

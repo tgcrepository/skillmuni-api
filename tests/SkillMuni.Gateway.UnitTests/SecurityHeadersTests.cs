@@ -8,7 +8,7 @@ public sealed class SecurityHeadersTests
     [Fact]
     public void Api_responses_get_the_security_headers_and_lose_the_server_banner()
     {
-        var headers = new HeaderDictionary { ["Server"] = "Kestrel", ["X-Powered-By"] = "ASP.NET" };
+        IHeaderDictionary headers = new HeaderDictionary { ["Server"] = "Kestrel", ["X-Powered-By"] = "ASP.NET" };
 
         SecurityHeadersMiddleware.Apply(headers, https: false, relaxedCsp: false);
 
@@ -24,7 +24,7 @@ public sealed class SecurityHeadersTests
     [Fact]
     public void Https_adds_hsts_and_swagger_keeps_its_own_csp()
     {
-        var headers = new HeaderDictionary();
+        IHeaderDictionary headers = new HeaderDictionary();
 
         SecurityHeadersMiddleware.Apply(headers, https: true, relaxedCsp: true);
 

@@ -169,4 +169,35 @@ public sealed class MuniServiceTests
         Assert.Equal("The Connector", me.Archetype);
         Assert.False(me.Fresh);
     }
+
+    [Fact]
+    public void Erased_learner_is_a_tombstone_that_ignores_late_events()
+    {
+        var learner = _muni.Known(xp: 120);
+        learner.CompleteQuest(1, _muni.Clock.GetUtcNow().UtcDateTime);
+
+        learner.Erase(_muni.Clock.GetUtcNow().UtcDateTime);
+        learner.ApplyTotals(500, 2, "Pathfinder", 800, 3, _muni.Clock.GetUtcNow().UtcDateTime);
+        learner.Register("Yash", "Pohare", _muni.Clock.GetUtcNow().UtcDateTime, _muni.Clock.GetUtcNow().UtcDateTime);
+        learner.CompleteQuest(2, _muni.Clock.GetUtcNow().UtcDateTime);
+        learner.SetArchetype("The Connector", _muni.Clock.GetUtcNow().UtcDateTime);
+
+        Assert.True(learner.IsErased);
+        Assert.Equal((0, "", "", 0, 0, (string?)null), (learner.TotalXp, learner.FirstName, learner.LastName, learner.QuestsDone, learner.StreakDays, learner.Archetype));
+    }
+
+    [Fact]
+    public async Task Erased_learner_gets_defaults_and_nothing_is_stored()
+    {
+        _muni.Known(xp: 120).Erase(_muni.Clock.GetUtcNow().UtcDateTime);
+
+        var me = await _muni.MeAsync();
+        var reply = await _muni.Service.AskAsync(_muni.Who, new AskRequest("hi", null), CancellationToken.None);
+
+        Assert.True(me.Erased);
+        Assert.Equal(0, me.Xp);
+        Assert.Equal("Yash", me.First);
+        Assert.NotEmpty(reply.Blocks);
+        Assert.Empty(await _muni.Service.HistoryAsync(_muni.Who, CancellationToken.None));
+    }
 }

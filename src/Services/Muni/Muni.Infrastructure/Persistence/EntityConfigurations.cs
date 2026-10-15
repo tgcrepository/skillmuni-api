@@ -38,6 +38,8 @@ internal sealed class MuniLearnerConfiguration : IEntityTypeConfiguration<MuniLe
         b.Property(e => e.QuestsDoneMask).HasColumnName("quests_done_mask");
         b.Property(e => e.Archetype).HasColumnName("archetype").HasMaxLength(100);
         b.Property(e => e.UpdatedAt).HasColumnName("updated_at");
+        b.Property(e => e.ErasedAt).HasColumnName("erased_at");
+        b.Property(e => e.Version).HasColumnName("version").IsConcurrencyToken();
         b.Ignore(e => e.QuestsDone);
     }
 }

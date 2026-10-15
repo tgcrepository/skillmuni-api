@@ -64,6 +64,11 @@ public sealed class MuniService(
         var me = await snapshots.BuildAsync(who, cancellationToken);
         var answer = await responder.AnswerAsync(new MuniQuestion(text, request.Intent), me, cancellationToken);
         var chips = answer.Chips.Take(3).ToList();
+        if (me.Erased)
+        {
+            // A token issued before the erasure is still valid for a few minutes: answer, but keep nothing.
+            return new MuniReplyDto(Guid.NewGuid().ToString(), answer.Blocks, chips);
+        }
 
         var now = clock.GetUtcNow().UtcDateTime;
         var last = await chats.LastAsync(who.Id, cancellationToken);
