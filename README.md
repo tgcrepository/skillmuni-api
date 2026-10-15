@@ -10,6 +10,7 @@ Azure Service Bus events through an outbox. Rules: [`CLAUDE.md`](CLAUDE.md).
 | `src/Services/Identity` | Login, sign-up, sessions, Google, contact verification, institute claims, consents — see its [README](src/Services/Identity/README.md) |
 | `src/Services/Cv` | CV upload, background parsing (Document Intelligence), summary, quest pre-fill — see its [README](src/Services/Cv/README.md) |
 | `src/Services/Gamification` | XP ledger, levels, badges, streaks, daily quests, Arena, Rewards — see its [README](src/Services/Gamification/README.md) |
+| `src/Services/Careers` | My Jobs, Hire Fest, Career Launchpad, My Matches — see its [README](src/Services/Careers/README.md) |
 | `src/Services/Learner` | 8 quests, progress, profile + photo, drafts, DigiLocker, programme codes, trophies, ESCO, preferences — see its [README](src/Services/Learner/README.md) |
 | `tests` | Unit tests (Application layer, gateway), integration tests (Testcontainers MySQL), `SkillMuni.Testing` helpers |
 | `deploy` | `bicep/` for Azure, `local/` for docker compose |
@@ -42,7 +43,7 @@ dotnet format SkillMuni.sln --verify-no-changes
 
 ## Migrations
 ```bash
-svc=Identity   # or Learner, Cv, Gamification
+svc=Identity   # or Learner, Cv, Gamification, Careers
 dotnet ef migrations add <Name> --project src/Services/$svc/$svc.Infrastructure --startup-project src/Services/$svc/$svc.Api -o Persistence/Migrations
 dotnet ef migrations bundle --project src/Services/$svc/$svc.Infrastructure --startup-project src/Services/$svc/$svc.Api -o efbundle-$svc
 ```

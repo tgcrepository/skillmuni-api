@@ -11,10 +11,11 @@
      losing it makes stored account numbers unreadable)
    - `cv-db-connection`: `server=<mysqlHost>;database=cv;user=cv_svc;password=…;SslMode=Required`
    - `gamification-db-connection`: `server=<mysqlHost>;database=gamification;user=gamification_svc;password=…;SslMode=Required`
+   - `careers-db-connection`: `server=<mysqlHost>;database=careers;user=careers_svc;password=…;SslMode=Required`
 3. Create the per-service MySQL user (grants on its own schema only): `identity_svc` with
-   `SELECT, INSERT, UPDATE, DELETE` on `identity.*`, `learner_svc` on `learner.*` and `cv_svc` on `cv.*`, `gamification_svc` on `gamification.*`; a separate migration
+   `SELECT, INSERT, UPDATE, DELETE` on `identity.*`, `learner_svc` on `learner.*` and `cv_svc` on `cv.*`, `gamification_svc` on `gamification.*`, `careers_svc` on `careers.*`; a separate migration
    user with DDL rights runs the EF bundles.
-4. Push images `skillmuni-identity`, `skillmuni-learner`, `skillmuni-cv`, `skillmuni-gamification` and `skillmuni-gateway` to the registry, run the migration
+4. Push images `skillmuni-identity`, `skillmuni-learner`, `skillmuni-cv`, `skillmuni-gamification`, `skillmuni-careers` and `skillmuni-gateway` to the registry, run the migration
    bundles, deploy again.
 
 Each app has its own managed identity: AcrPull on the registry and Key Vault Secrets User on the vault, plus
@@ -24,6 +25,8 @@ Each app has its own managed identity: AcrPull on the registry and Key Vault Sec
 - CV: Data Sender on the events topic, Data Receiver on its `cv` subscription, Blob Data Contributor on `cv-files`
   only, Cognitive Services User on the Document Intelligence account (no keys: local auth is off).
 - Gamification: Data Sender on the events topic, Data Receiver on its `gamification` subscription.
+- Careers: Data Sender on the events topic, Data Receiver on its `careers` subscription (assessment result, Job Profile
+  completed, claim confirmed, erasure), Blob Data Contributor on `careers-files` only (CVs uploaded when applying).
 
 ## Local
 `deploy/local` holds the MySQL init script and the Service Bus emulator config used by `docker-compose.yml`.

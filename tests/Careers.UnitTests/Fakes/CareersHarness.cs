@@ -13,7 +13,7 @@ using MsOptions = Microsoft.Extensions.Options.Options;
 namespace Careers.UnitTests.Fakes;
 
 /// <summary>Every Careers use case wired to in-memory fakes, the seed catalogue and a controllable clock (15 Oct 2026).</summary>
-public sealed class CareersHarness
+internal sealed class CareersHarness
 {
     public const string Tenant = "skillmuni-in";
 

@@ -10,10 +10,10 @@ XP is credited only by Gamification, with ledger key `learnerId + reason + sourc
 
 | Event | Publisher | Fields | Consumers → effect |
 |---|---|---|---|
-| `identity.learner.registered` | Identity | accountId, firstName, lastName, market | Learner (create profile), Gamification (player), Learning, Assessment, Careers (learner row, lazy otherwise) |
+| `identity.learner.registered` | Identity | accountId, firstName, lastName, market | Learner (create profile), Gamification (player), Learning, Assessment. Careers creates its learner row lazily |
 | `identity.contact.verified` | Identity | accountId, kind, value | Learner |
 | `identity.claim.consented` | Identity | claimId, accountId, shareProgress, verifyCertificate, applyForMe | Learner |
-| `identity.claim.confirmed` | Identity | claimId, accountId | Learner → marks quests 1–5 done and publishes their step and quest events (BR-119). Gamification pays nothing for the claim itself |
+| `identity.claim.confirmed` | Identity | claimId, accountId | Learner → marks quests 1–5 done and publishes their step and quest events (BR-119). Gamification pays nothing for the claim itself; Careers → My Matches show before the profile is published (BR-72) |
 | `identity.claim.declined` | Identity | claimId | — |
 | `identity.consent.changed` | Identity | accountId, scope, policyVersion, granted | — |
 | `identity.data-export.requested` | Identity | accountId | every service with learner data (export, when built) |
@@ -40,7 +40,7 @@ XP is credited only by Gamification, with ledger key `learnerId + reason + sourc
 | `careers.application.withdrawn` | Careers | learnerId, applicationId | — (XP never decreases, BR-115) |
 | `careers.fest.booked` | Careers | learnerId, bookingId, festId | Gamification → +100 on the first (BR-112), key `mission:first-fest-booking` |
 | `careers.fest.cancelled` | Careers | learnerId, bookingId | — |
-| `gamification.xp.awarded` | Gamification | learnerId, totalXp, level, rank, levelStartXp, nextLevelXp, badges, streakDays | Learner (profile header), Careers (Launchpad) |
+| `gamification.xp.awarded` | Gamification | learnerId, totalXp, level, rank, levelStartXp, nextLevelXp, badges, streakDays | Learner (profile header). Careers doesn't subscribe: no Careers card shows XP or level |
 | `gamification.badge.earned` | Gamification | learnerId, badgeId, badgeName | — |
 
 Queues (not topics): `notifications` (Identity → Platform): one message per SMS / email / push to send.

@@ -76,6 +76,15 @@ var gamificationEvents = [
 ]
 var gamificationEventsQuoted = [for e in gamificationEvents: '\'${e}\'']
 
+// Events the Careers service projects for the Launchpad and My Matches, plus erasure.
+var careersEvents = [
+  'assessment.attempt.submitted'
+  'learner.job-profile.completed'
+  'identity.claim.confirmed'
+  'identity.learner.erased'
+]
+var careersEventsQuoted = [for e in careersEvents: '\'${e}\'']
+
 // ---------- Monitoring ----------
 resource logs 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
   name: 'log-${prefix}'
@@ -114,6 +123,11 @@ resource cvAppId 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' =
 
 resource gamificationAppId 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
   name: 'id-${prefix}-gamification'
+  location: location
+}
+
+resource careersAppId 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
+  name: 'id-${prefix}-careers'
   location: location
 }
 
@@ -166,6 +180,16 @@ resource acrPullGamification 'Microsoft.Authorization/roleAssignments@2022-04-01
   properties: {
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roles.acrPull)
     principalId: gamificationAppId.properties.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
+resource acrPullCareers 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(registry.id, careersAppId.id, roles.acrPull)
+  scope: registry
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roles.acrPull)
+    principalId: careersAppId.properties.principalId
     principalType: 'ServicePrincipal'
   }
 }
@@ -230,6 +254,16 @@ resource vaultGamification 'Microsoft.Authorization/roleAssignments@2022-04-01' 
   properties: {
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roles.keyVaultSecretsUser)
     principalId: gamificationAppId.properties.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
+resource vaultCareers 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(vault.id, careersAppId.id, roles.keyVaultSecretsUser)
+  scope: vault
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roles.keyVaultSecretsUser)
+    principalId: careersAppId.properties.principalId
     principalType: 'ServicePrincipal'
   }
 }
@@ -308,6 +342,12 @@ resource cvDatabase 'Microsoft.DBforMySQL/flexibleServers/databases@2023-12-30' 
 resource gamificationDatabase 'Microsoft.DBforMySQL/flexibleServers/databases@2023-12-30' = {
   parent: mysql
   name: 'gamification'
+  properties: { charset: 'utf8mb4', collation: 'utf8mb4_0900_ai_ci' }
+}
+
+resource careersDatabase 'Microsoft.DBforMySQL/flexibleServers/databases@2023-12-30' = {
+  parent: mysql
+  name: 'careers'
   properties: { charset: 'utf8mb4', collation: 'utf8mb4_0900_ai_ci' }
 }
 
@@ -477,6 +517,45 @@ resource gamificationReceivesEvents 'Microsoft.Authorization/roleAssignments@202
   }
 }
 
+resource careersSubscription 'Microsoft.ServiceBus/namespaces/topics/subscriptions@2022-10-01-preview' = {
+  parent: eventsTopic
+  name: 'careers'
+  properties: {
+    maxDeliveryCount: 10
+    lockDuration: 'PT1M'
+    deadLetteringOnMessageExpiration: true
+  }
+}
+
+resource careersSubscriptionFilter 'Microsoft.ServiceBus/namespaces/topics/subscriptions/rules@2022-10-01-preview' = {
+  parent: careersSubscription
+  name: '$Default'
+  properties: {
+    filterType: 'SqlFilter'
+    sqlFilter: { sqlExpression: 'sys.Label IN (${join(careersEventsQuoted, ', ')})' }
+  }
+}
+
+resource careersSendsEvents 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(eventsTopic.id, careersAppId.id, roles.serviceBusDataSender)
+  scope: eventsTopic
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roles.serviceBusDataSender)
+    principalId: careersAppId.properties.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
+resource careersReceivesEvents 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(careersSubscription.id, careersAppId.id, roles.serviceBusDataReceiver)
+  scope: careersSubscription
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roles.serviceBusDataReceiver)
+    principalId: careersAppId.properties.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
 // ---------- Blob Storage (profile photos, certificate files, CVs): private, Entra-only ----------
 resource storage 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   name: 'st${take(compact, 22)}'
@@ -527,6 +606,22 @@ resource cvWritesFiles 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   properties: {
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roles.storageBlobDataContributor)
     principalId: cvAppId.properties.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
+resource careersFiles 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-05-01' = {
+  parent: blobService
+  name: 'careers-files'
+  properties: { publicAccess: 'None' }
+}
+
+resource careersWritesFiles 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(careersFiles.id, careersAppId.id, roles.storageBlobDataContributor)
+  scope: careersFiles
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roles.storageBlobDataContributor)
+    principalId: careersAppId.properties.principalId
     principalType: 'ServicePrincipal'
   }
 }
@@ -608,6 +703,17 @@ resource redisAccessGamification 'Microsoft.Cache/redis/accessPolicyAssignments@
     accessPolicyName: 'Data Contributor'
     objectId: gamificationAppId.properties.principalId
     objectIdAlias: 'ca-gamification'
+  }
+}
+
+resource redisAccessCareers 'Microsoft.Cache/redis/accessPolicyAssignments@2024-03-01' = {
+  parent: redis
+  name: 'ca-careers'
+  dependsOn: [redisAccessGamification] // Redis applies one access-policy change at a time.
+  properties: {
+    accessPolicyName: 'Data Contributor'
+    objectId: careersAppId.properties.principalId
+    objectIdAlias: 'ca-careers'
   }
 }
 
@@ -747,6 +853,34 @@ module gamificationApp 'modules/container-app.bicep' = {
   }
 }
 
+module careersApp 'modules/container-app.bicep' = {
+  name: 'ca-careers'
+  dependsOn: [acrPullCareers, vaultCareers, careersSendsEvents, careersReceivesEvents, careersWritesFiles, redisAccessCareers]
+  params: {
+    name: 'ca-careers'
+    location: location
+    environmentId: apps.id
+    identityId: careersAppId.id
+    identityClientId: careersAppId.properties.clientId
+    image: '${registry.properties.loginServer}/skillmuni-careers:${imageTag}'
+    registryServer: registry.properties.loginServer
+    externalIngress: false
+    minReplicas: isProd ? 2 : 1
+    secrets: [
+      { name: 'careers-db', keyVaultUrl: '${vault.properties.vaultUri}secrets/careers-db-connection', identity: careersAppId.id }
+      { name: 'auth-public-key', keyVaultUrl: '${vault.properties.vaultUri}secrets/auth-signing-public-key', identity: careersAppId.id }
+    ]
+    env: concat(commonEnv, [
+      { name: 'ConnectionStrings__Careers', secretRef: 'careers-db' }
+      { name: 'Careers__Storage__ServiceUri', value: storage.properties.primaryEndpoints.blob }
+      { name: 'Careers__LearnerBaseAddress', value: 'http://ca-learner/' }
+      { name: 'Auth__SigningPublicKeyPem', secretRef: 'auth-public-key' }
+      { name: 'ServiceBus__FullyQualifiedNamespace', value: '${bus.name}.servicebus.windows.net' }
+      { name: 'ServiceBus__Subscription', value: careersSubscription.name }
+    ])
+  }
+}
+
 module gatewayApp 'modules/container-app.bicep' = {
   name: 'ca-gateway'
   dependsOn: [acrPullGateway, vaultGateway]
@@ -770,6 +904,7 @@ module gatewayApp 'modules/container-app.bicep' = {
       { name: 'ReverseProxy__Clusters__learner__Destinations__primary__Address', value: 'http://ca-learner/' }
       { name: 'ReverseProxy__Clusters__cv__Destinations__primary__Address', value: 'http://ca-cv/' }
       { name: 'ReverseProxy__Clusters__gamification__Destinations__primary__Address', value: 'http://ca-gamification/' }
+      { name: 'ReverseProxy__Clusters__careers__Destinations__primary__Address', value: 'http://ca-careers/' }
     ], originEnv)
   }
 }

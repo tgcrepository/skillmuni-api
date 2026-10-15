@@ -99,6 +99,8 @@ jobs:
         run: docker build -f src/Services/Cv/Cv.Api/Dockerfile -t skillmuni-cv:${{ github.sha }} .
       - name: Gamification
         run: docker build -f src/Services/Gamification/Gamification.Api/Dockerfile -t skillmuni-gamification:${{ github.sha }} .
+      - name: Careers
+        run: docker build -f src/Services/Careers/Careers.Api/Dockerfile -t skillmuni-careers:${{ github.sha }} .
       - name: Gateway
         run: docker build -f src/Gateway/SkillMuni.Gateway/Dockerfile -t skillmuni-gateway:${{ github.sha }} .
 
