@@ -68,7 +68,7 @@ jobs:
           for c in $(docker compose ps -a --format '{{.Service}} {{.State}} {{.ExitCode}}' | awk '$2!="running" || $3!="0" {print $1}'); do
             echo "== $c (not running)"; docker compose logs --no-color --tail=40 "$c"
           done > exited.txt 2>&1 || true
-          grep -E "fail:|crit:|Unhandled|Exception|error" compose.log | grep -v -E "EndOfStream|BadHttpRequest" | awk '!seen[$0]++' | head -150 > errors.txt || true
+          grep -E "fail:|crit:|Unhandled|Exception|error|failed \(delivery|before the learner exists" compose.log | grep -v -E "EndOfStream|BadHttpRequest|Connection refused|could not be found|ExceptionDispatcher|SocketException|Service Bus error on|last_error|sqledge-1|errorlog" | awk '!seen[$0]++' | head -150 > errors.txt || true
 
       - name: Post results to the pull request
         if: ${{ !cancelled() && github.event_name == 'pull_request' }}
