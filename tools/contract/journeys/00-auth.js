@@ -24,5 +24,13 @@ module.exports = async (ctx, j) => {
   r.record(j, 'POST', 'auth/register', await anon.call('POST', 'auth/register', { firstName: 'A', lastName: 'B', email: c.email, password: 'Skillmuni123', consent: true }), 409, 'email-taken');
   r.record(j, 'POST', 'auth/email/resend', await anon.call('POST', 'auth/email/resend', { email: ctx.unique('x') + '@example.com' }), [200, 404, 422]);
   r.record(j, 'POST', 'auth/google', await anon.call('POST', 'auth/google', { credential: 'not-a-real-token' }), [401, 422, 503], 'no Google client id in Development → 503 google-unavailable');
+  // Mobile login (BR-136): verify a mobile on the account, then sign in with an SMS code.
+  const phone = '+9198' + String(Date.now()).slice(-8);
+  r.record(j, 'POST', 'me/phone/code', await c.call('POST', 'me/phone/code', { phone }), 200);
+  r.record(j, 'POST', 'me/phone/verify', await c.call('POST', 'me/phone/verify', { phone, code: ctx.CODE }), [200, 204]);
+  r.record(j, 'POST', 'auth/logout', await c.call('POST', 'auth/logout', {}), [200, 204]);
+  r.record(j, 'POST', 'auth/otp', await c.call('POST', 'auth/otp', { phone }), 200);
+  r.record(j, 'POST', 'auth/otp/verify', await c.call('POST', 'auth/otp/verify', { phone, code: ctx.CODE }), 200);
+  r.record(j, 'GET', 'session', await c.call('GET', 'session'), 200, 'signed in with the mobile code');
   ctx.state.main = c;
 };
