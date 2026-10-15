@@ -1,37 +1,28 @@
 # Backend progress · SkillMuni India Phase 1
 
-Updated 13 Oct 2026. Repo: `skillmuni-api` (zip from the 13 Oct chat; 5 commits).
+Updated 15 Oct 2026. Repo: GitHub `tgcrepository/skillmuni-api`, PR #1 (`chore/first-build`). CI runs on every push to a PR.
 
 ## Status
 | Step | State | Notes |
 |---|---|---|
-| 1 · Foundation | ✅ Written · ⚠️ not yet compiled | Solution, `CLAUDE.md`, BuildingBlocks (Common, Web, Messaging), YARP gateway, docker compose, Bicep, CI |
-| 2 · Identity | ✅ Written · ⚠️ not yet compiled | 33 endpoints: login (mobile / email code / password), sign-up, sessions, Google, contact verify, claims, consents, privacy |
-| 3 · Learner | ✅ Written · ⚠️ not yet compiled | 27 endpoints + 1 internal: quests, progress, drafts, profile + photo, DigiLocker, programme codes, IFSC, feedback, trophies, ESCO, preferences; 6 event handlers |
-| 4 · CV | ✅ Written · ⚠️ not yet compiled | 4 endpoints: upload (file or photographed pages), status, summary, delete; background parse worker; Document Intelligence reader + rule-based interpreter; quest pre-fill event (Learner merges) |
-| 5 · Gamification | ✅ Written · ⚠️ not yet compiled | 9 endpoints: Arena (board, cheer, challenge), Rewards, badges + showcase, XP ledger, streak, daily quests; 15 event handlers; the only XP ledger |
-| Tests | ✅ Written · ⚠️ not yet run | Identity 60 + 16; Learner ~108 + 14; CV ~30 + 9; Gamification ~22 unit + 6 integration (Testcontainers MySQL) |
-| 6 · Assessment (Career Drivers) | ⏭ Next | |
+| 1 · Foundation | ✅ Built and verified in CI | Solution, `CLAUDE.md`, BuildingBlocks (Common, Web, Messaging, Storage), YARP gateway, docker compose, Bicep, CI |
+| 2 · Identity | ✅ Built, tests pass · ⚠️ BRD reconcile pending (chat 3) | 33 endpoints |
+| 3 · Learner | ✅ Built, tests pass · ⚠️ BRD reconcile pending (chat 3) | 27 endpoints + 1 internal; 6 event handlers |
+| 4 · CV | ✅ Built, tests pass | 4 endpoints, background parse worker |
+| 5 · Gamification | ✅ Built, tests pass · ⚠️ BRD reconcile pending (chat 2) | 9 endpoints; 15 event handlers; the only XP ledger |
+| Tests | ✅ 265 passing, 0 failing | Unit + integration (Testcontainers MySQL), run by CI |
+| 6 · Assessment (Career Drivers) | ⏭ After chats 2 and 3 | |
 
-## Not verified yet — do this first
-The build workspace can't reach NuGet or download the .NET SDK and has no Docker daemon, so nothing has been
-compiled or run. Checked instead: all C# files parse (tree-sitter), every project reference and `using` resolves,
-JSON / YAML / MSBuild XML parse, `docker compose config` passes.
-
-```bash
-dotnet build SkillMuni.sln && dotnet test SkillMuni.sln   # needs the .NET 10 SDK and Docker
-```
-CI (`.github/workflows/ci.yml`) runs the same plus format, vulnerable packages, migration drift (all four services),
-images and Bicep.
-
-Most likely to need a fix on first build:
-1. Oracle MySQL provider: Guid → `char(36)`, bool → `tinyint(1)`, `json` columns, `ExecuteUpdate`/`ExecuteDelete`.
-2. Hand-written migrations and snapshots. If `has-pending-model-changes` fails, delete that service's
-   `Persistence/Migrations` and run `dotnet ef migrations add InitialCreate` (README has the command).
-3. Package API drift: Asp.Versioning 10.2, OpenTelemetry 1.15, Testcontainers 4.15, Http.Resilience 10,
-   Azure.AI.DocumentIntelligence 1.0 (`AnalyzeDocumentAsync` overload).
-4. `list.Contains(x)` in LINQ (Arena batch / friends boards, player lookups): if Oracle's provider can't translate
-   parameterised collections, switch those queries to constants or a join.
+## Chat log
+**15 Oct · Chat 1: first build.** Repo moved to GitHub and restructured (backend at the root, planning docs in `docs/`).
+First compile and test run, fixed:
+- Errors went out as `application/json`: `[Produces("application/json")]` on controllers rewrote the ObjectResult's content
+  type. Problems are now written directly (`ProblemActionResult`), so every error is `application/problem+json` (B-38).
+- `CultureInfo.GetCultureInfo("en-GB")` fails in globalization-invariant images; CV and Learner now use the invariant
+  culture and a language-name table (B-39).
+- Versioned OpenAPI documents (`Asp.Versioning.OpenApi`, analyzer AV0029/AV0030); `dotnet format` fixes.
+Added: `Idempotency-Key` on XP and create POSTs (B-37), Redis via managed identity (B-40), CI posts results to the PR (B-41).
+Every CI check is green: build (0 warnings), format, vulnerable packages, migrations match the model, tests, images, Bicep.
 
 ## Decisions (B-xx)
 | Id | Decision | Why |
@@ -71,9 +62,18 @@ Most likely to need a fix on first build:
 | B-33 | Arena "batch" = learners in the same programme; "friends" = players you cheer (until friends exist) | No batch or friends data elsewhere yet |
 | B-34 | Streak counts any day with XP or learning; daily quests credit automatically (no claim button) | Matches the screens; MISS-03 proposed a claim endpoint |
 | B-35 | Founding Learner is earned by everyone who joins before 1 Oct 2027 | "Join in Skillmuni's first year"; launch date to confirm |
-| B-36 | Claim confirmation pays 100 XP | Amount not in the BRD — to confirm |
+| B-36 | ~~Claim confirmation pays 100 XP~~ Superseded by the final BRD (BR-119): normal step and quest XP. Fix in chat 2/3 | — |
+| B-37 | `Idempotency-Key`: `[Idempotent]` resource filter in `SkillMuni.Web`. Key scoped to tenant + caller + method + path; request body SHA-256 (size and type for uploads over 1 MB); 2xx/4xx kept 24 h in the distributed cache, 5xx/409/429 not kept; 422 `idempotency-key-reused`, 400 `invalid-idempotency-key`, 409 `request-in-progress`; replays send `Idempotent-Replayed: true`. Header optional | CLAUDE.md §4. Kept in Redis, not MySQL: short-lived, no schema change per service. The ledger's unique key stays the final guard |
+| B-38 | Errors are written by `ProblemActionResult`, not `ObjectResult` | `[Produces]` filters overwrote `application/problem+json` |
+| B-39 | Images keep `InvariantGlobalization`; no ICU culture lookups in code | Smaller images; dates and language names don't depend on OS data |
+| B-40 | One cache registration in `AddSkillMuniServiceDefaults`: `Redis:Host` → Azure Cache for Redis with Entra (managed identity, Data Contributor access policy per service in Bicep); `ConnectionStrings:Redis` locally; memory otherwise. Keys prefixed `skillmuni:<service>:` | Access keys are disabled in Azure (no secret); services can't read each other's keys |
+| B-41 | CI posts a results comment (test counts, errors, failing assertions) to the PR | Build logs can't be downloaded from the Claude workspace; the PR comment is how results are read |
+| B-42 | OpenAPI stays on built-in `Microsoft.AspNetCore.OpenApi` (B-03), not Swashbuckle as `CLAUDE.md` §4 says | .NET 10 standard; Swashbuckle's UI is still used in the gateway. `CLAUDE.md` wording to update |
 
 ## For the frontend
+- Optional: send an `Idempotency-Key` header (a UUID per user action, reused on retry) on quest complete, feedback,
+  programme, trophy upload, profile photo, CV upload, cheer, challenge, register, consents and claim confirm/finish.
+  Without it the API behaves as before.
 - Only change: `environment.apiBaseUrl` → `/api/v1`. API and app must be same-site (cookies are SameSite=Lax).
 - `AuthUser.photoUrl` is `null` until Identity consumes `learner.photo.changed` (next Identity change).
 - Learner differences from the mock: repeat quest completion returns `xpEarned: 0`; completing a quest out of order is
@@ -88,10 +88,8 @@ Most likely to need a fix on first build:
   `cv-not-ready` (409), `cv-parse-failed` (410). Remove `.doc` and `.webp` from `CV_ACCEPT`.
 
 ## Gaps and open items
-- `Idempotency-Key` not handled yet (Identity `register`, `admin/claims`; Learner `me/programme`, `me/feedback`).
 - Learner doesn't answer `identity.data-export.requested` yet (MISS-08 export).
 - `gamification.xp.awarded` and `assessment.attempt.submitted` payloads are proposed in Learner; confirm when built.
-- Redis in Azure is Entra-only; Learner uses per-replica memory cache there until the Entra Redis client is added.
 - ESCO group → category mapping and quest step labels are flagged to confirm (A-245, quest-defs).
 - CV: skill vocabulary is a ~50-skill starter set (replace with the frontend's 956-skill deck); the interpreter is
   rule-based; Document Intelligence F0 (dev) reads only the first 2 pages; CV doesn't answer data-export yet.
@@ -101,13 +99,30 @@ Most likely to need a fix on first build:
   night / morning learning wait on their source events. Learning's event payloads are proposed, not agreed.
 - Claim V4 numbers come from the institute upload; they should come from Learner's internal `profile-progress`.
 - Retention jobs wait on the retention policy (BRD §9).
-- ~~Docs said .NET 8 + Pomelo~~ Fixed 15 Oct: `BACKEND_RULES.md` and `BACKEND_HANDOFF.md` now say .NET 10 + Oracle provider.
-- **Reconcile with the final BRD (14 Oct) before Assessment:** see the table in `PROJECT_CONTEXT.md` (streak, claim XP, coins, code tries, XP table, `/me/progress`).
+- **Reconcile with the final BRD (14 Oct), chats 2 and 3.** Audit of 15 Oct:
+  - Gamification: claim pays a flat 100 (BR-119: step + quest XP); streak counts any activity (§4.4: a finished brief
+    quiz only) plus a +5 streak bonus (none); coin / voucher fields (A-317, keep `coins: 0` where the app reads it);
+    `/me/progress` from Learner's estimate (BR-138: the ledger total, served by Gamification); catalogue badges awarded
+    now (§4.3: only the 8 quest badges in Phase 1); programme bonus once per code (BR-113: once per learner); feedback
+    30-day cap decided in Learner (move to Gamification); daily quest 3 is "Finish a brief" (BR-118: Finish Brain-Vita);
+    no validators (null showcase ids → 500).
+  - Learner: Quest 5 has 2 parts (BRD: 3, 18 steps, 760 XP); optional flags on Identity/Receipts wrong (BR-101); quest
+    badge names old (§4.3); claimed quests 1–5 send no step / quest events; programme code logged.
+  - Identity: 5 code tries (BR-11: hidden limit 20, no count shown); internal account lookup anonymous with email in the
+    query string; no `learner.photo.changed` consumer.
+  - Waiting on unbuilt services: island XP 25 × 4 (Assessment), first-moves +50 (Learning), missions +50/+100/+100 (Careers).
+- Product questions open (Yash): what "Finish Brain-Vita" means once the course is done; whether a retaken quiz keeps the
+  streak; keep the 10-wrong-passwords lock (B-08)?
+- Validators missing in CV and Gamification (FluentValidation).
 
 ## Next
-| Step | Estimate |
-|---|---|
-| First build + test run, fix what the compiler finds | 1.5–2.5 h |
-| Reconcile Identity / Learner / Gamification with the final BRD (PROJECT_CONTEXT table) | 1.5–2 h |
-| Assessment (Career Drivers) | ~3 h |
-| Learning, Careers (jobs, fests, launchpad, matches), Muni, Platform (notifications, tenant theme) | ~16–20 h |
+| Chat | Work | Estimate |
+|---|---|---|
+| 2 | Gamification: reconcile with BRD §4 (list above), validators, `/me/progress` from the ledger | 3–4 h |
+| 3 | Learner + Identity: quest catalogue, claim events, code tries, internal endpoint auth, photo event, logs | 2–3 h |
+| 4 | Assessment (Career Drivers, island XP) | 3–4 h |
+| 5 | Learning (briefs, quizzes, Lobby, first moves, streak input) | 4–5 h |
+| 6 | Careers (Job Profile, matches, My Jobs, Hire Fest, Launchpad missions) | 6–8 h |
+| 7 | Muni | 2–3 h |
+| 8 | Platform (theme, market config, notifications) | 3–4 h |
+| 9 | End-to-end: frontend against the gateway | 2 h |

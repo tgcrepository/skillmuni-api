@@ -57,3 +57,4 @@ row (other services keep its id) and revokes every session.
 | `Tenancy:Tenants:<id>:Market` · `GoogleClientId` | app setting | `IN` / `ZA`; Google client per tenant (A-253) |
 | `Identity:*` | app setting | tries, lifetimes, idle timeout, policy version |
 | `Database:MigrateOnStartup` | Development / Testing | production uses the migration bundle |
+| `Redis:Host` (Azure, managed identity) or `ConnectionStrings:Redis` (compose) | Bicep / compose | shared cache and Idempotency-Key store; memory if neither |

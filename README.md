@@ -14,6 +14,16 @@ Azure Service Bus events through an outbox. Rules: [`CLAUDE.md`](CLAUDE.md).
 | `tests` | Unit tests (Application layer, gateway), integration tests (Testcontainers MySQL), `SkillMuni.Testing` helpers |
 | `deploy` | `bicep/` for Azure, `local/` for docker compose |
 
+## Shared behaviour
+- **Errors:** RFC 7807 `application/problem+json` with `message` and `errors.code[0]` (`SkillMuni.Web/Errors`).
+- **Idempotency-Key:** actions marked `[Idempotent]` (POSTs that create records or award XP) replay the first 2xx/4xx
+  response for a repeated key for 24 h; another body with the same key is 422 `idempotency-key-reused`, a malformed key
+  400 `invalid-idempotency-key`, a key still running 409 `request-in-progress`. Replays carry `Idempotent-Replayed: true`.
+  Requests without the header run normally.
+- **Cache:** `AddSkillMuniServiceDefaults` registers one `IDistributedCache` per service (keys prefixed
+  `skillmuni:<service>:`): Azure Cache for Redis with Entra sign-in (`Redis:Host`), a plain `ConnectionStrings:Redis`
+  locally, or memory.
+
 ## Run locally
 ```bash
 ./scripts/dev-setup.sh          # writes .env: local passwords, RSA signing keys, HMAC key, AES key

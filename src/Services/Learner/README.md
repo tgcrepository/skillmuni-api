@@ -54,7 +54,7 @@ Erasure (`identity.learner.erased`) deletes blobs, then every row.
 | `ConnectionStrings:Learner` | Key Vault `learner-db-connection` |
 | `Learner:Security:EncryptionKey` | Key Vault `learner-encryption-key` (32 bytes, base64) |
 | `Learner:Storage:ServiceUri` (Azure, managed identity) or `ConnectionString` (Azurite) | Bicep / compose; in memory if neither (local only) |
-| `ConnectionStrings:Redis` | optional; memory cache if empty |
+| `Redis:Host` (Azure, managed identity) or `ConnectionStrings:Redis` (compose) | IFSC / ESCO cache and Idempotency-Key store; memory if neither |
 | `Learner:DigiLocker:Mode` | `off` · `sandbox` (Development/Testing only) |
 | `Learner:Quests`, `Learner:Levels`, `Learner:Xp`, `Learner:SkillOptions` | optional overrides of the code defaults |
 | `ServiceBus:Subscription` | `learner` |

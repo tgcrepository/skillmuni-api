@@ -47,3 +47,4 @@ for S9.
 | `Cv:MaxBytes`, `MaxPages`, `UploadsPerDay`, `SupportedLanguages`, `KeepOriginalFor`, `PollInterval` | optional |
 | `Cv:Worker:Enabled` | `false` to run an API-only replica |
 | `ServiceBus:Subscription` | `cv` |
+| `Redis:Host` (Azure, managed identity) or `ConnectionStrings:Redis` (compose) | shared cache and Idempotency-Key store; memory if neither |

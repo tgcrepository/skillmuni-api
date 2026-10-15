@@ -46,6 +46,6 @@ Consumes (subscription `gamification`): `identity.learner.registered`, `identity
 | Key | Where |
 |---|---|
 | `ConnectionStrings:Gamification` | Key Vault `gamification-db-connection` |
-| `ConnectionStrings:Redis` | optional; caches the shared boards (memory cache if empty) |
+| `Redis:Host` (Azure, managed identity) or `ConnectionStrings:Redis` (compose) | boards cache and Idempotency-Key store; memory if neither |
 | `Gamification:Xp`, `Levels`, `Quests`, `DailyQuests`, `Arena`, `TimeZones`, `FoundingUntil` | optional overrides |
 | `ServiceBus:Subscription` | `gamification` |
