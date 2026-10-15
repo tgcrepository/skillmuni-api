@@ -7,6 +7,9 @@ namespace Identity.Application.Services;
 
 public sealed record EmailOwnerDto(Guid AccountId);
 
+/// <summary>Internal lookup body (no PII in URLs).</summary>
+public sealed record EmailOwnerRequest(string? Email);
+
 /// <summary>Service-to-service lookups (internal ingress only), e.g. the CV parser's "email already used" check (S9).</summary>
 public interface IAccountLookupService
 {

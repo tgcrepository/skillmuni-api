@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using System.Text.Json;
 using Identity.Application.Abstractions;
 using Identity.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Hosting;
@@ -6,6 +7,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using SkillMuni.Messaging.Inbox;
 using Testcontainers.MySql;
 
 namespace Identity.IntegrationTests;
@@ -50,6 +52,11 @@ public sealed class IdentityApiFactory : WebApplicationFactory<Program>, IAsyncL
         await seed(db, scope.ServiceProvider);
         await db.SaveChangesAsync();
     }
+
+    /// <summary>Delivers an event as the Service Bus consumer would (inbox, tenant, one transaction).</summary>
+    public Task<DispatchOutcome> DeliverAsync(string eventType, object payload, Guid? eventId = null) =>
+        Services.GetRequiredService<IntegrationEventDispatcher<IdentityDbContext>>()
+            .DispatchAsync(eventType, eventId ?? Guid.NewGuid(), "skillmuni-in", JsonSerializer.Serialize(payload, JsonSerializerOptions.Web), CancellationToken.None);
 
     public async Task<T> QueryAsync<T>(Func<IdentityDbContext, Task<T>> query)
     {

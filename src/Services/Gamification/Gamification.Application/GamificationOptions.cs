@@ -15,10 +15,15 @@ public sealed class GamificationOptions
     /// <summary>The 8 registration quests, for their badges. Empty = <see cref="QuestBadge.Defaults"/>.</summary>
     public List<QuestBadge> Quests { get; set; } = [];
 
-    /// <summary>Three daily quests, reset at local midnight (MISS-03). Empty = <see cref="DailyQuestDefinition.Defaults"/>.</summary>
+    /// <summary>Three daily quests, reset at local midnight (BR-118). Empty = <see cref="DailyQuestDefinition.Defaults"/>.</summary>
     public List<DailyQuestDefinition> DailyQuests { get; set; } = [];
 
     public ArenaOptions Arena { get; set; } = new();
+
+    public BadgeOptions Badges { get; set; } = new();
+
+    /// <summary>BR-114: feedback pays at most once per this period (Gamification decides, from its ledger).</summary>
+    public TimeSpan FeedbackXpEvery { get; set; } = TimeSpan.FromDays(30);
 
     /// <summary>"Founding Learner": joined before this date.</summary>
     public DateOnly FoundingUntil { get; set; } = new(2027, 10, 1);
@@ -41,30 +46,56 @@ public sealed class GamificationOptions
 }
 
 /// <summary>
-/// XP per reason. The amounts the Learner screens show at once (A-249, A-274) must match; this table is the source
-/// of truth for what is credited.
+/// XP per reason: BRD §4.1, the final rulebook (an action not listed earns nothing). The amounts the Learner screens
+/// show at once must match; this table is the source of truth for what is credited. Daily quests carry their own XP.
 /// </summary>
 public sealed class XpTable
 {
+    /// <summary>BR-100 / BR-101.</summary>
     public int QuestStep { get; set; } = 20;
 
+    /// <summary>BR-102.</summary>
     public int QuestComplete { get; set; } = 50;
 
+    /// <summary>BR-104: assessment islands 1–3, first attempt.</summary>
+    public int IslandCleared { get; set; } = 25;
+
+    /// <summary>BR-105: Career Drivers submitted (pays island 4), first attempt.</summary>
+    public int AssessmentSubmitted { get; set; } = 25;
+
+    /// <summary>BR-106: +1 per correct answer on a brief quiz's first submit.</summary>
+    public int QuizCorrectAnswer { get; set; } = 1;
+
+    /// <summary>BR-107.</summary>
+    public int FirstMoves { get; set; } = 50;
+
+    /// <summary>BR-108.</summary>
     public int ProfilePhoto { get; set; } = 5;
 
+    /// <summary>BR-109.</summary>
     public int ProfileSkills { get; set; } = 10;
 
+    /// <summary>BR-110: the Job Profile first reaches 100%.</summary>
+    public int JobProfileComplete { get; set; } = 50;
+
+    /// <summary>BR-111.</summary>
+    public int FirstApplication { get; set; } = 100;
+
+    /// <summary>BR-112.</summary>
+    public int FirstFestBooking { get; set; } = 100;
+
+    /// <summary>BR-113: once per learner.</summary>
     public int Programme { get; set; } = 100;
 
+    /// <summary>BR-114: at most once per <see cref="GamificationOptions.FeedbackXpEvery"/>.</summary>
     public int Feedback { get; set; } = 5;
+}
 
-    public int CareerDrivers { get; set; } = 20;
-
-    /// <summary>Confirming an institute profile (claim V4). Flagged: amount to confirm.</summary>
-    public int ClaimConfirmed { get; set; } = 100;
-
-    /// <summary>Quizzes: +1 per correct answer on the first check, no bonus (QuizResult copy).</summary>
-    public int QuizCorrectAnswer { get; set; } = 1;
+/// <summary>§4.3: Phase 1 awards the 8 quest badges only; the 48 catalogue badges show progress until the rules engine ships.</summary>
+public sealed class BadgeOptions
+{
+    /// <summary>Award catalogue badges when their goal is met (MISS-02). Off for launch.</summary>
+    public bool AwardCatalogue { get; set; }
 }
 
 public sealed class LevelStep
@@ -85,18 +116,19 @@ public sealed class LevelStep
     public string Rank { get; set; } = string.Empty;
 }
 
+/// <summary>A registration quest and its badge (BRD §3.3, §4.3).</summary>
 public sealed class QuestBadge
 {
     public static readonly IReadOnlyList<QuestBadge> Defaults =
     [
-        new() { Number = 1, Slug = "who-dis", Name = "Who Dis?", Badge = "ID Unlocked", Parts = 3 },
-        new() { Number = 2, Slug = "hit-me-up", Name = "Hit Me Up", Badge = "Signal Boost", Parts = 3 },
-        new() { Number = 3, Slug = "big-brain-stuff", Name = "Big Brain Stuff", Badge = "Big Brain", Parts = 3 },
-        new() { Number = 4, Slug = "your-flex-era", Name = "Your Flex Era", Badge = "Flex Mode", Parts = 3 },
-        new() { Number = 5, Slug = "work-lore", Name = "Work Lore", Badge = "Lore Keeper", Parts = 2 },
-        new() { Number = 6, Slug = "pick-your-arc", Name = "Pick Your Arc", Badge = "Arc Chosen", Parts = 1 },
-        new() { Number = 7, Slug = "drop-the-receipts", Name = "Drop the Receipts", Badge = "Receipts In", Parts = 1 },
-        new() { Number = 8, Slug = "vibe-check", Name = "Vibe Check", Badge = "Vibe Checked", Parts = 1 },
+        new() { Number = 1, Slug = "who-dis", Name = "Who Dis?", Badge = "Main Character Badge", Parts = 3 },
+        new() { Number = 2, Slug = "hit-me-up", Name = "Hit Me Up", Badge = "Link Up Badge", Parts = 3 },
+        new() { Number = 3, Slug = "big-brain-stuff", Name = "Big Brain Stuff", Badge = "Big Brain Badge", Parts = 3 },
+        new() { Number = 4, Slug = "your-flex-era", Name = "Your Flex Era", Badge = "Player Card", Parts = 3 },
+        new() { Number = 5, Slug = "work-lore", Name = "Work Lore", Badge = "Storyteller Badge", Parts = 3 },
+        new() { Number = 6, Slug = "pick-your-arc", Name = "Pick Your Arc", Badge = "Arc Badge", Parts = 1 },
+        new() { Number = 7, Slug = "drop-the-receipts", Name = "Drop the Receipts", Badge = "Receipts Badge", Parts = 1 },
+        new() { Number = 8, Slug = "vibe-check", Name = "Vibe Check", Badge = "Vibe Check Badge", Parts = 1 },
     ];
 
     public int Number { get; set; }
@@ -110,14 +142,19 @@ public sealed class QuestBadge
     public int Parts { get; set; }
 }
 
-/// <summary>A daily quest: <c>Kind</c> is <c>minutes</c> (learning time), <c>quiz-80</c> or <c>brief</c>.</summary>
+/// <summary>
+/// A daily quest (BR-118): <c>Kind</c> is <c>brain-vita</c> (a Brain-Vita brief finished for the first time, B-44),
+/// <c>minutes</c> (learning time) or <c>quiz-80</c> (80%+ on a quiz's first submit).
+/// </summary>
 public sealed class DailyQuestDefinition
 {
     public static readonly IReadOnlyList<DailyQuestDefinition> Defaults =
     [
+        // B-44: resume Brain-Vita where the learner left off. Gamification can't know the resume point, so the link is
+        // the course; the frontend / Learning resolves the next unfinished brief.
+        new() { Id = "finish-bv", Kind = "brain-vita", Icon = "play", Title = "Finish Brain-Vita", Target = 1, Xp = 10, Link = "/learn/brain-vita", Label = "Resume where you left off" },
         new() { Id = "learn-15", Kind = "minutes", Icon = "clock", Title = "Learn for 15 minutes", Target = 15, Xp = 5, Link = "/home", Unit = "min" },
-        new() { Id = "quiz-80", Kind = "quiz-80", Icon = "lightbulb", Title = "Score 80%+ on any quiz", Target = 1, Xp = 5, Link = "/home" },
-        new() { Id = "brief-1", Kind = "brief", Icon = "play", Title = "Finish a brief", Target = 1, Xp = 10, Link = "/home" },
+        new() { Id = "quiz-80", Kind = "quiz-80", Icon = "lightbulb", Title = "Score 80%+ on any quiz", Target = 1, Xp = 5, Link = "/learn/brain-vita/non-verbal-reasoning/quiz" },
     ];
 
     public string Id { get; set; } = string.Empty;
@@ -136,14 +173,15 @@ public sealed class DailyQuestDefinition
 
     /// <summary>Shown after the count, e.g. "6 / 15 min".</summary>
     public string? Unit { get; set; }
+
+    /// <summary>A fixed progress label shown until the quest is done, instead of the count.</summary>
+    public string? Label { get; set; }
 }
 
 /// <summary>Arena values the design marks "to confirm" (handoff 58:1530, MISS-11).</summary>
 public sealed class ArenaOptions
 {
     public int BoardSize { get; set; } = 50;
-
-    public int StreakBonus { get; set; } = 5;
 
     public int PromotionRank { get; set; } = 3;
 

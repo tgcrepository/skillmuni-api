@@ -24,6 +24,9 @@ public interface IStatsService
     Task<StreakDetailDto> StreakAsync(Guid learnerId, CancellationToken cancellationToken);
 
     Task<DailyQuestsDto> DailyQuestsAsync(Guid learnerId, CancellationToken cancellationToken);
+
+    /// <summary>API-125 <c>GET me/progress</c>: quest progress and the ledger total (BR-138, A-316).</summary>
+    Task<LearnerProgressDto> ProgressAsync(Guid learnerId, CancellationToken cancellationToken);
 }
 
 public sealed class StatsService(
@@ -71,14 +74,14 @@ public sealed class StatsService(
         var pinned = player.Showcase
             .Select(id => catalogue.Badges.FirstOrDefault(b => b.Id == id && b.State == "earned"))
             .Where(b => b is not null)
-            .Select(b => new ShowcaseSlotDto(b!.Id, b.Name, b.Icon, b.Rarity))
+            .Select(b => new ShowcaseSlotDto(b!.Id, b.Name, b.Icon, b.Image, b.Rarity))
             .ToList();
         var slots = pinned.Cast<ShowcaseSlotDto?>().Concat(Enumerable.Repeat<ShowcaseSlotDto?>(null, Player.MaxShowcase)).Take(Player.MaxShowcase).ToList();
         var upNext = catalogue.Badges
             .Where(b => b.State == "progress")
             .OrderByDescending(b => b.Percent)
             .Take(UpNextCount)
-            .Select(b => new BadgeProgressDto(b.Id, b.Name, b.Icon, b.ProgressLabel ?? string.Empty, b.Percent))
+            .Select(b => new BadgeProgressDto(b.Id, b.Name, b.Icon, b.Image, b.ProgressLabel ?? string.Empty, b.Percent))
             .ToList();
 
         var monday = PlayerViews.Monday(today);
@@ -87,9 +90,7 @@ public sealed class StatsService(
         return new RewardsDashboardDto(
             new RewardsPlayerDto(player.Name, player.Initials, level.Rank, player.PhotoUrl, level.Level, player.TotalXp, level.Target, batchRank),
             new StreakDto(player.CurrentStreak(today), PlayerViews.Week(today, days)),
-
-            // A-302: coins aren't earned in Phase 1.
-            new WalletDto(player.TotalXp, 0, 0, 0, 0),
+            new WalletDto(player.TotalXp),
             await DailyAsync(player, today, cancellationToken),
             new RewardsBadgesDto(catalogue.Earned, catalogue.Total, slots, upNext),
             rank,
@@ -128,7 +129,21 @@ public sealed class StatsService(
         var today = engine.Today(player);
         var monday = PlayerViews.Monday(today);
         var days = await activity.ListDaysAsync(learnerId, monday, monday.AddDays(6), cancellationToken);
-        return new StreakDetailDto(player.CurrentStreak(today), player.BestStreak, PlayerViews.Week(today, days), Rules.Arena.StreakBonus);
+        return new StreakDetailDto(player.CurrentStreak(today), player.BestStreak, PlayerViews.Week(today, days));
+    }
+
+    public async Task<LearnerProgressDto> ProgressAsync(Guid learnerId, CancellationToken cancellationToken)
+    {
+        var player = await PlayerOrNewAsync(learnerId, cancellationToken);
+        var xp = await ledger.TotalAsync(learnerId, cancellationToken);
+        var level = engine.LevelFor(xp);
+
+        // "Completed" is the highest quest finished in order; parts are those of the quest after it (quest.handlers.ts).
+        var quests = Rules.QuestBadges();
+        var completed = quests.TakeWhile(q => player.Counter(Counters.QuestDone(q.Slug)) > 0).Select(q => q.Number).LastOrDefault();
+        var current = quests.FirstOrDefault(q => q.Number == completed + 1);
+        var partsDone = current is null ? 0 : Math.Min(player.Counter(Counters.QuestParts(current.Slug)), current.Parts);
+        return new LearnerProgressDto(completed, partsDone, xp, player.Badges, level.Level, level.Rank, level.Target);
     }
 
     public async Task<DailyQuestsDto> DailyQuestsAsync(Guid learnerId, CancellationToken cancellationToken)

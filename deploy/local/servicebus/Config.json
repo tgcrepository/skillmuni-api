@@ -162,15 +162,6 @@
                     }
                   },
                   {
-                    "Name": "identity-claim-confirmed",
-                    "Properties": {
-                      "FilterType": "Correlation",
-                      "CorrelationFilter": {
-                        "Label": "identity.claim.confirmed"
-                      }
-                    }
-                  },
-                  {
                     "Name": "identity-learner-erased",
                     "Properties": {
                       "FilterType": "Correlation",
@@ -207,6 +198,15 @@
                     }
                   },
                   {
+                    "Name": "learner-job-profile-completed",
+                    "Properties": {
+                      "FilterType": "Correlation",
+                      "CorrelationFilter": {
+                        "Label": "learner.job-profile.completed"
+                      }
+                    }
+                  },
+                  {
                     "Name": "learner-programme-enrolled",
                     "Properties": {
                       "FilterType": "Correlation",
@@ -230,6 +230,15 @@
                       "FilterType": "Correlation",
                       "CorrelationFilter": {
                         "Label": "learner.photo.changed"
+                      }
+                    }
+                  },
+                  {
+                    "Name": "assessment-island-cleared",
+                    "Properties": {
+                      "FilterType": "Correlation",
+                      "CorrelationFilter": {
+                        "Label": "assessment.island.cleared"
                       }
                     }
                   },
@@ -284,6 +293,120 @@
                       "FilterType": "Correlation",
                       "CorrelationFilter": {
                         "Label": "learning.course.completed"
+                      }
+                    }
+                  },
+                  {
+                    "Name": "learning-first-moves-claimed",
+                    "Properties": {
+                      "FilterType": "Correlation",
+                      "CorrelationFilter": {
+                        "Label": "learning.first-moves.claimed"
+                      }
+                    }
+                  },
+                  {
+                    "Name": "careers-application-sent",
+                    "Properties": {
+                      "FilterType": "Correlation",
+                      "CorrelationFilter": {
+                        "Label": "careers.application.sent"
+                      }
+                    }
+                  },
+                  {
+                    "Name": "careers-fest-booked",
+                    "Properties": {
+                      "FilterType": "Correlation",
+                      "CorrelationFilter": {
+                        "Label": "careers.fest.booked"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "Name": "identity",
+                "Properties": {
+                  "DeadLetteringOnMessageExpiration": false,
+                  "DefaultMessageTimeToLive": "PT24H",
+                  "LockDuration": "PT1M",
+                  "MaxDeliveryCount": 5,
+                  "ForwardDeadLetteredMessagesTo": "",
+                  "ForwardTo": "",
+                  "RequiresSession": false
+                },
+                "Rules": [
+                  {
+                    "Name": "learner-photo-changed",
+                    "Properties": {
+                      "FilterType": "Correlation",
+                      "CorrelationFilter": {
+                        "Label": "learner.photo.changed"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "Name": "assessment",
+                "Properties": {
+                  "DeadLetteringOnMessageExpiration": false,
+                  "DefaultMessageTimeToLive": "PT24H",
+                  "LockDuration": "PT1M",
+                  "MaxDeliveryCount": 5,
+                  "ForwardDeadLetteredMessagesTo": "",
+                  "ForwardTo": "",
+                  "RequiresSession": false
+                },
+                "Rules": [
+                  {
+                    "Name": "identity-learner-registered",
+                    "Properties": {
+                      "FilterType": "Correlation",
+                      "CorrelationFilter": {
+                        "Label": "identity.learner.registered"
+                      }
+                    }
+                  },
+                  {
+                    "Name": "identity-learner-erased",
+                    "Properties": {
+                      "FilterType": "Correlation",
+                      "CorrelationFilter": {
+                        "Label": "identity.learner.erased"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "Name": "learning",
+                "Properties": {
+                  "DeadLetteringOnMessageExpiration": false,
+                  "DefaultMessageTimeToLive": "PT24H",
+                  "LockDuration": "PT1M",
+                  "MaxDeliveryCount": 5,
+                  "ForwardDeadLetteredMessagesTo": "",
+                  "ForwardTo": "",
+                  "RequiresSession": false
+                },
+                "Rules": [
+                  {
+                    "Name": "identity-learner-erased",
+                    "Properties": {
+                      "FilterType": "Correlation",
+                      "CorrelationFilter": {
+                        "Label": "identity.learner.erased"
+                      }
+                    }
+                  },
+                  {
+                    "Name": "assessment-attempt-submitted",
+                    "Properties": {
+                      "FilterType": "Correlation",
+                      "CorrelationFilter": {
+                        "Label": "assessment.attempt.submitted"
                       }
                     }
                   }

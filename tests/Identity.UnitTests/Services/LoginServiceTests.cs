@@ -45,19 +45,19 @@ public sealed class LoginServiceTests
 
         var result = await h.Login.SendPhoneCodeAsync(new SendPhoneCodeRequest("98765 43210"), CancellationToken.None);
 
-        Assert.Equal(new OtpChallengeDto("+91 98765 43210", 30, 5), result.Value);
+        Assert.Equal(new OtpChallengeDto("+91 98765 43210", 30, 20), result.Value);
         var sent = Assert.Single(h.Notifications.Sent);
         Assert.Equal(Phone, sent.To);
     }
 
     [Fact]
-    public async Task Four_wrong_codes_count_down_then_429()
+    public async Task Wrong_codes_count_down_from_the_hidden_limit_of_20_then_429()
     {
         var h = new IdentityHarness();
         SeedPhoneAccount(h);
         await h.Login.SendPhoneCodeAsync(new SendPhoneCodeRequest(Phone), CancellationToken.None);
 
-        for (var left = 4; left >= 1; left--)
+        for (var left = 19; left >= 1; left--)
         {
             var wrong = await h.Login.VerifyPhoneCodeAsync(new VerifyPhoneCodeRequest(Phone, "000001"), CancellationToken.None);
             Assert.Equal("invalid-code", wrong.Error?.Code);
@@ -86,22 +86,31 @@ public sealed class LoginServiceTests
     }
 
     [Fact]
-    public async Task Wrong_password_is_401_and_locks_after_ten()
+    public async Task Wrong_password_is_401_and_never_locks_the_account()
     {
         var h = new IdentityHarness();
         h.Store.Accounts.Add(Account.RegisterWithEmail("skillmuni-in", "IN", "Yash", "P", "yash@x.com", h.Passwords.Hash("letmein123"), h.Now));
 
-        for (var i = 0; i < 10; i++)
+        // B-46: no lock for wrong passwords; the gateway's rate limits apply instead.
+        for (var i = 0; i < 25; i++)
         {
             var wrong = await h.Login.PasswordLoginAsync(new PasswordLoginRequest("yash@x.com", "nope"), CancellationToken.None);
             Assert.Equal("wrong-credentials", wrong.Error?.Code);
         }
 
+        Assert.True((await h.Login.PasswordLoginAsync(new PasswordLoginRequest("yash@x.com", "letmein123"), CancellationToken.None)).IsSuccess);
+    }
+
+    [Fact]
+    public async Task An_administratively_locked_account_is_still_423()
+    {
+        var h = new IdentityHarness();
+        var account = Account.RegisterWithEmail("skillmuni-in", "IN", "Yash", "P", "yash@x.com", h.Passwords.Hash("letmein123"), h.Now);
+        account.Lock(h.Now);
+        h.Store.Accounts.Add(account);
+
         var locked = await h.Login.PasswordLoginAsync(new PasswordLoginRequest("yash@x.com", "letmein123"), CancellationToken.None);
         Assert.Equal("account-locked", locked.Error?.Code);
-
-        h.Clock.Advance(TimeSpan.FromMinutes(16));
-        Assert.True((await h.Login.PasswordLoginAsync(new PasswordLoginRequest("yash@x.com", "letmein123"), CancellationToken.None)).IsSuccess);
     }
 
     [Fact]

@@ -138,3 +138,32 @@ public sealed class PreferencesRequestValidator : AbstractValidator<PreferencesR
     public PreferencesRequestValidator() =>
         RuleFor(r => r.Language).NotEmpty().Matches("^[a-z]{2,3}(-[A-Z]{2})?$").WithMessage("Use a language code like en or hi-IN.");
 }
+
+public sealed class SaveAboutRequestValidator : AbstractValidator<SaveAboutRequest>
+{
+    public SaveAboutRequestValidator() =>
+        RuleFor(r => r.Text).MaximumLength(Domain.JobProfileSettings.MaxAboutLength)
+            .WithMessage($"Keep it to {Domain.JobProfileSettings.MaxAboutLength} characters.");
+}
+
+public sealed class ApplyCvChangesRequestValidator : AbstractValidator<ApplyCvChangesRequest>
+{
+    public const int MaxIds = 50;
+
+    public ApplyCvChangesRequestValidator()
+    {
+        RuleFor(r => r.Ids).NotNull().WithMessage("Send the ids of the changes to add, or an empty list.")
+            .Must(ids => ids is null || ids.Count <= MaxIds).WithMessage($"Up to {MaxIds} changes at a time.");
+        RuleForEach(r => r.Ids).NotEmpty().MaximumLength(120);
+    }
+}
+
+public sealed class UpdateShareRequestValidator : AbstractValidator<UpdateShareRequest>
+{
+    public UpdateShareRequestValidator(Microsoft.Extensions.Options.IOptions<LearnerServiceOptions> options)
+    {
+        var allowed = options.Value.JobProfile.Expiries();
+        RuleFor(r => r.ExpiresDays).Must(d => allowed.Contains(d))
+            .WithMessage($"Links last {string.Join(", ", allowed)} days.");
+    }
+}

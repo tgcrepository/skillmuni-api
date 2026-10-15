@@ -42,8 +42,7 @@ internal sealed class AccountConfiguration : IEntityTypeConfiguration<Account>
         b.Property(e => e.PasswordHash).HasColumnName("password_hash").HasMaxLength(500);
         b.Property(e => e.GoogleSubject).HasColumnName("google_subject").HasMaxLength(255);
         b.Property(e => e.Status).HasColumnName("status");
-        b.Property(e => e.LockedUntil).HasColumnName("locked_until");
-        b.Property(e => e.FailedPasswordAttempts).HasColumnName("failed_password_attempts");
+        b.Property(e => e.PhotoUrl).HasColumnName("photo_url").HasMaxLength(300);
         b.Property(e => e.Market).HasColumnName("market").HasMaxLength(2).IsRequired();
         b.Property(e => e.Roles).HasColumnName("roles").HasMaxLength(200).IsRequired();
         b.Property(e => e.CreatedAt).HasColumnName("created_at");

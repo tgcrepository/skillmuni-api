@@ -197,7 +197,9 @@ public sealed class ProfileService(
         {
             ["photo"] = Xp.ProfilePhoto,
             ["skills"] = Xp.ProfileSkills,
-            ["drivers"] = Xp.CareerDrivers,
+
+            // BR-139: the "Take Career Drivers" task earns nothing itself (the assessment pays its own XP).
+            ["drivers"] = 0,
         };
         var tasks = StrengthTasks
             .Select(t => new StrengthTaskDto(t.Id, t.Label, xp.GetValueOrDefault(t.Id), done[t.Id]))

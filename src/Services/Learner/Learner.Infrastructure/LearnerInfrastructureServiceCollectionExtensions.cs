@@ -42,6 +42,7 @@ public static class LearnerInfrastructureServiceCollectionExtensions
         services.AddScoped<IEnrolmentRepository, EnrolmentRepository>();
         services.AddScoped<IFeedbackRepository, FeedbackRepository>();
         services.AddScoped<ITrophyFileRepository, TrophyFileRepository>();
+        services.AddScoped<IJobProfileRepository, JobProfileRepository>();
         services.AddScoped<ILearnerDataEraser, LearnerDataEraser>();
 
         // Field encryption: the key is a Key Vault secret (Learner--Security--EncryptionKey).
