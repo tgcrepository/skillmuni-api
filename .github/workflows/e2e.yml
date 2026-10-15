@@ -24,7 +24,7 @@ jobs:
           node-version: 22
 
       - name: Local secrets
-        run: ./scripts/dev-setup.sh
+        run: bash scripts/dev-setup.sh
 
       - name: Build images
         run: docker compose build --parallel 2>&1 | tail -40
