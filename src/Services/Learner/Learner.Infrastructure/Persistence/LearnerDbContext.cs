@@ -38,6 +38,8 @@ public sealed class LearnerDbContext : DbContext, IUnitOfWork
 
     public DbSet<TrophyFile> TrophyFiles => Set<TrophyFile>();
 
+    public DbSet<JobProfileSettings> JobProfiles => Set<JobProfileSettings>();
+
     public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
 
     public DbSet<InboxMessage> InboxMessages => Set<InboxMessage>();
@@ -70,6 +72,7 @@ public sealed class LearnerDbContext : DbContext, IUnitOfWork
         modelBuilder.Entity<Enrolment>().HasQueryFilter(e => e.TenantId == CurrentTenantId);
         modelBuilder.Entity<Feedback>().HasQueryFilter(e => e.TenantId == CurrentTenantId);
         modelBuilder.Entity<TrophyFile>().HasQueryFilter(e => e.TenantId == CurrentTenantId);
+        modelBuilder.Entity<JobProfileSettings>().HasQueryFilter(e => e.TenantId == CurrentTenantId);
     }
 
     internal sealed class UtcConverter() : ValueConverter<DateTime, DateTime>(

@@ -14,6 +14,7 @@ public sealed class InMemoryLearnerStore :
     IEnrolmentRepository,
     IFeedbackRepository,
     ITrophyFileRepository,
+    IJobProfileRepository,
     ILearnerDataEraser,
     IUnitOfWork,
     IOutbox
@@ -33,6 +34,8 @@ public sealed class InMemoryLearnerStore :
     public List<Feedback> Feedback { get; } = [];
 
     public List<TrophyFile> Trophies { get; } = [];
+
+    public List<JobProfileSettings> JobProfiles { get; } = [];
 
     public List<IntegrationEvent> Events { get; } = [];
 
@@ -77,6 +80,15 @@ public sealed class InMemoryLearnerStore :
 
     public void Add(QuestAnswers answers) => Answers.Add(answers);
 
+    public Task<DateTime?> LastUpdatedAsync(Guid learnerId, CancellationToken cancellationToken) =>
+        Task.FromResult(Answers.Where(a => a.LearnerId == learnerId).Select(a => (DateTime?)a.UpdatedAt).Max());
+
+    // Job Profile
+    Task<JobProfileSettings?> IJobProfileRepository.FindAsync(Guid learnerId, CancellationToken cancellationToken) =>
+        Task.FromResult(JobProfiles.FirstOrDefault(j => j.LearnerId == learnerId));
+
+    public void Add(JobProfileSettings settings) => JobProfiles.Add(settings);
+
     // Drafts
     Task<Draft?> IDraftRepository.FindAsync(Guid learnerId, string key, CancellationToken cancellationToken) =>
         Task.FromResult(Drafts.FirstOrDefault(d => d.LearnerId == learnerId && d.Key == key));
@@ -119,6 +131,7 @@ public sealed class InMemoryLearnerStore :
         Task.FromResult<IReadOnlyList<string>>(
             Learners.Where(l => l.Id == learnerId && l.PhotoBlob != null).Select(l => l.PhotoBlob!)
                 .Concat(Trophies.Where(t => t.LearnerId == learnerId).Select(t => t.BlobName))
+                .Concat(JobProfiles.Where(j => j.LearnerId == learnerId && j.CvBlob != null).Select(j => j.CvBlob!))
                 .ToList());
 
     public Task EraseAsync(Guid learnerId, CancellationToken cancellationToken)
@@ -130,6 +143,7 @@ public sealed class InMemoryLearnerStore :
         Enrolments.RemoveAll(e => e.LearnerId == learnerId);
         Feedback.RemoveAll(f => f.LearnerId == learnerId);
         Trophies.RemoveAll(t => t.LearnerId == learnerId);
+        JobProfiles.RemoveAll(j => j.LearnerId == learnerId);
         return Task.CompletedTask;
     }
 }

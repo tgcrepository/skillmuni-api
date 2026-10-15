@@ -51,12 +51,29 @@ internal static class AnswersJson
     public static bool IsSkipped(string json, string partKey) =>
         ParseObject(json)[$"{partKey}Skipped"] is JsonValue value && value.TryGetValue<bool>(out var skipped) && skipped;
 
+    /// <summary>
+    /// BR-101: whether a save added anything: a field other than the <c>…Skipped</c> flags with a non-empty value
+    /// (text, a non-empty list or object, a number or <c>true</c>).
+    /// </summary>
+    public static bool HasContent(JsonElement values) =>
+        values.ValueKind == JsonValueKind.Object &&
+        values.EnumerateObject().Any(p => !p.Name.EndsWith("Skipped", StringComparison.Ordinal) && IsFilled(p.Value));
+
     public static string? ReadString(JsonElement values, string name) =>
         values.ValueKind == JsonValueKind.Object && values.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String
             ? value.GetString()
             : null;
 
     public static int Utf8Length(string json) => Encoding.UTF8.GetByteCount(json);
+
+    private static bool IsFilled(JsonElement value) => value.ValueKind switch
+    {
+        JsonValueKind.String => !string.IsNullOrWhiteSpace(value.GetString()),
+        JsonValueKind.Array => value.EnumerateArray().Any(IsFilled),
+        JsonValueKind.Object => value.EnumerateObject().Any(p => IsFilled(p.Value)),
+        JsonValueKind.Number or JsonValueKind.True => true,
+        _ => false,
+    };
 
     private static JsonObject ParseObject(string json) =>
         JsonNode.Parse(string.IsNullOrWhiteSpace(json) ? Empty : json) as JsonObject ?? new JsonObject();

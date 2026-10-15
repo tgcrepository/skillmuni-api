@@ -12,10 +12,10 @@ namespace Gamification.Api.Controllers;
 [Route("api/v{version:apiVersion}/arena")]
 public sealed class ArenaController(IArenaService arena) : GamificationControllerBase
 {
-    /// <summary><c>scope</c>: everyone · batch · friends. <c>period</c>: week · month · all.</summary>
+    /// <summary><c>scope</c>: everyone · batch · friends. <c>period</c>: week · month · all (422 validation otherwise).</summary>
     [HttpGet]
-    public async Task<IActionResult> Board([FromQuery] string? scope, [FromQuery] string? period, CancellationToken cancellationToken) =>
-        (await arena.BoardAsync(LearnerId, scope ?? "everyone", period ?? "week", cancellationToken)).ToActionResult(this);
+    public async Task<IActionResult> Board([FromQuery] ArenaQuery query, CancellationToken cancellationToken) =>
+        (await arena.BoardAsync(LearnerId, query.Scope ?? "everyone", query.Period ?? "week", cancellationToken)).ToActionResult(this);
 
     [HttpPost("players/{id:guid}/cheer")]
     [Idempotent]

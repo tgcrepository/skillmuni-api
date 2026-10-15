@@ -55,6 +55,12 @@ public sealed class GameStore :
     public Task<bool> ExistsAsync(Guid learnerId, string reason, string sourceId, CancellationToken cancellationToken) =>
         Task.FromResult(Ledger.Any(e => e.LearnerId == learnerId && e.Reason == reason && e.SourceId == sourceId));
 
+    public Task<DateTime?> LastCreditAsync(Guid learnerId, string reason, CancellationToken cancellationToken) =>
+        Task.FromResult(Ledger.Where(e => e.LearnerId == learnerId && e.Reason == reason).Select(e => (DateTime?)e.OccurredAt).Max());
+
+    public Task<int> TotalAsync(Guid learnerId, CancellationToken cancellationToken) =>
+        Task.FromResult(Ledger.Where(e => e.LearnerId == learnerId).Sum(e => e.Xp));
+
     public Task<PagedResult<XpEntry>> ListAsync(Guid learnerId, PageRequest page, CancellationToken cancellationToken)
     {
         var mine = Ledger.Where(e => e.LearnerId == learnerId).OrderByDescending(e => e.OccurredAt).ToList();
@@ -158,6 +164,15 @@ public sealed class GameHarness
         await new Gamification.Application.Handlers.AccountRegisteredHandler(Engine(), Clock)
             .HandleAsync(new AccountRegistered(id, name.Split(' ')[0], name.Contains(' ', StringComparison.Ordinal) ? name[(name.IndexOf(' ', StringComparison.Ordinal) + 1)..] : string.Empty, "IN") { TenantId = "skillmuni-in" }, CancellationToken.None);
         return id;
+    }
+
+    /// <summary>Credits <paramref name="xp"/> under a test reason, as one event would (badges and totals included).</summary>
+    public async Task GiveXpAsync(Guid id, int xp)
+    {
+        var engine = Engine();
+        var player = await engine.PlayerAsync(id, null, null, CancellationToken.None);
+        await engine.AwardAsync(player, "test", Guid.NewGuid().ToString(), xp, CancellationToken.None);
+        await engine.FinishAsync(player, CancellationToken.None);
     }
 
     private sealed class FixedTenant : ITenantContext

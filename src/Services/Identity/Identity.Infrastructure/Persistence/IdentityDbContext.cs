@@ -8,13 +8,14 @@ using Identity.Domain.Sessions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SkillMuni.Common.Tenancy;
+using SkillMuni.Messaging.Inbox;
 using SkillMuni.Messaging.Outbox;
 
 namespace Identity.Infrastructure.Persistence;
 
 /// <summary>
 /// The <c>identity</c> schema. Every tenant-owned table has a global query filter on <c>tenant_id</c>
-/// (CLAUDE.md §6), and the outbox lives here too so events commit with the change.
+/// (CLAUDE.md §6); the outbox and inbox live here too, so events commit with the change they describe or cause.
 /// </summary>
 public sealed class IdentityDbContext : DbContext, IUnitOfWork
 {
@@ -40,6 +41,8 @@ public sealed class IdentityDbContext : DbContext, IUnitOfWork
 
     public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
 
+    public DbSet<InboxMessage> InboxMessages => Set<InboxMessage>();
+
     /// <summary>Read by the query filters on every query, so each request sees only its own tenant.</summary>
     private string CurrentTenantId => _tenant.TenantId;
 
@@ -56,6 +59,7 @@ public sealed class IdentityDbContext : DbContext, IUnitOfWork
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(IdentityDbContext).Assembly);
         modelBuilder.AddOutbox();
+        modelBuilder.AddInbox();
 
         modelBuilder.Entity<Account>().HasQueryFilter(e => e.TenantId == CurrentTenantId);
         modelBuilder.Entity<VerificationCode>().HasQueryFilter(e => e.TenantId == CurrentTenantId);

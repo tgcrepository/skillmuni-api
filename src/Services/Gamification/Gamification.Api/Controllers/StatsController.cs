@@ -7,7 +7,7 @@ using SkillMuni.Web.Errors;
 
 namespace Gamification.Api.Controllers;
 
-/// <summary>API-129, 132, 133 and MISS-01/03/04.</summary>
+/// <summary>API-125, 129, 132, 133 and MISS-01/03/04.</summary>
 [ApiVersion(1.0)]
 [Route("api/v{version:apiVersion}")]
 public sealed class StatsController(IStatsService stats) : GamificationControllerBase
@@ -23,7 +23,12 @@ public sealed class StatsController(IStatsService stats) : GamificationControlle
     /// <summary>Up to 3 earned badge ids, in showcase order.</summary>
     [HttpPut("badges/showcase")]
     public async Task<IActionResult> Showcase(ShowcaseRequest request, CancellationToken cancellationToken) =>
-        (await stats.SetShowcaseAsync(LearnerId, request.Ids, cancellationToken)).ToActionResult(this);
+        (await stats.SetShowcaseAsync(LearnerId, request.Ids ?? [], cancellationToken)).ToActionResult(this);
+
+    /// <summary>API-125: quest progress and the one XP total from the ledger (BR-138). Moved here from Learner.</summary>
+    [HttpGet("me/progress")]
+    public async Task<ActionResult<LearnerProgressDto>> Progress(CancellationToken cancellationToken) =>
+        await stats.ProgressAsync(LearnerId, cancellationToken);
 
     /// <summary>MISS-01: every XP credit, newest first.</summary>
     [HttpGet("me/xp/ledger")]

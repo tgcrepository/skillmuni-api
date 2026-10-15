@@ -42,6 +42,8 @@ public sealed class LearnerServiceOptions
     /// <summary>Lexicon for <c>GET profile/edit</c> skillOptions, until it comes from ESCO decks.</summary>
     public List<string> SkillOptions { get; set; } = [];
 
+    public JobProfileOptions JobProfile { get; set; } = new();
+
     public IReadOnlyList<Quest> QuestCatalog() =>
         (Quests.Count > 0 ? Quests : QuestDefaults.All).Select(q => q.ToQuest()).ToList();
 
@@ -68,8 +70,6 @@ public sealed class XpRules
     public int ProfilePhoto { get; set; } = 5;
 
     public int ProfileSkills { get; set; } = 10;
-
-    public int CareerDrivers { get; set; } = 20;
 }
 
 public sealed class LevelStep
@@ -115,21 +115,22 @@ public sealed class QuestPartDefinition
 }
 
 /// <summary>
-/// Defaults taken from the frontend's quest catalogue and screen definitions (13 Oct 2026). Labels and badges are
-/// flagged to confirm against <c>quest-defs.ts</c>; override in config when they change.
+/// The 8 quests and 18 steps of BRD §3.3, badge names from §4.3. <c>Optional</c> marks the all-optional steps of
+/// BR-101 (they pay +20 only when something was added): backup contact, education timeline, trophy shelf, receipts.
+/// Step keys are the ones the quest screens use for <c>&lt;key&gt;Skipped</c>; override in config when they change.
 /// </summary>
 public static class QuestDefaults
 {
     public static readonly IReadOnlyList<QuestDefinition> All =
     [
-        Q(1, "who-dis", "Who Dis?", "ID Unlocked", ("name", "Your name", false), ("identity", "Identity", true), ("birthday", "Birthday", false)),
-        Q(2, "hit-me-up", "Hit Me Up", "Signal Boost", ("mobile", "Mobile number", false), ("backup", "Backup contact", true), ("address", "Address", false)),
-        Q(3, "big-brain-stuff", "Big Brain Stuff", "Big Brain", ("level", "Education level", false), ("details", "Education details", false), ("timeline", "Timeline", true)),
-        Q(4, "your-flex-era", "Your Flex Era", "Flex Mode", ("skills", "Skills", false), ("languages", "Languages", false), ("trophies", "Trophies", true)),
-        Q(5, "work-lore", "Work Lore", "Lore Keeper", ("types", "Work types", false), ("chapters", "Work chapters", false)),
-        Q(6, "pick-your-arc", "Pick Your Arc", "Arc Chosen", ("arc", "What you're looking for", false)),
-        Q(7, "drop-the-receipts", "Drop the Receipts", "Receipts In", ("receipts", "Documents", false)),
-        Q(8, "vibe-check", "Vibe Check", "Vibe Checked", ("review", "Review", false)),
+        Q(1, "who-dis", "Who Dis?", "Main Character Badge", ("name", "Your name", false), ("identity", "ID & birthday", false), ("birthday", "The tea", false)),
+        Q(2, "hit-me-up", "Hit Me Up", "Link Up Badge", ("mobile", "Your digits", false), ("backup", "Backup contact", true), ("address", "Your spot", false)),
+        Q(3, "big-brain-stuff", "Big Brain Stuff", "Big Brain Badge", ("level", "Your level", false), ("details", "The details", false), ("timeline", "Timeline", true)),
+        Q(4, "your-flex-era", "Your Flex Era", "Player Card", ("skills", "Skill deck", false), ("languages", "Language passport", false), ("trophies", "Trophy shelf", true)),
+        Q(5, "work-lore", "Work Lore", "Storyteller Badge", ("types", "Work types", false), ("chapters", "Chapters", false), ("timeline", "Your timeline", false)),
+        Q(6, "pick-your-arc", "Pick Your Arc", "Arc Badge", ("arc", "Your arc", false)),
+        Q(7, "drop-the-receipts", "Drop the Receipts", "Receipts Badge", ("receipts", "Receipts", true)),
+        Q(8, "vibe-check", "Vibe Check", "Vibe Check Badge", ("review", "Vibe check", false)),
     ];
 
     public static readonly IReadOnlyList<string> SkillOptions =
@@ -146,4 +147,19 @@ public static class QuestDefaults
         Badge = badge,
         Parts = parts.Select(p => new QuestPartDefinition { Key = p.Key, Label = p.Label, Optional = p.Optional }).ToList(),
     };
+}
+
+/// <summary>Job Profile (API-068…074).</summary>
+public sealed class JobProfileOptions
+{
+    /// <summary>Base of the public share link: <c>{ShareBaseUrl}/cv/{name}-{code}</c>.</summary>
+    public string ShareBaseUrl { get; set; } = "https://skillmuni.app";
+
+    /// <summary>A-208: the link's lifetime cycles 7 → 30 → 90 days.</summary>
+    public List<int> ExpiryChoices { get; set; } = [];
+
+    /// <summary>A-207 / FR-14: a newer CV is a PDF or Word file up to 5 MB.</summary>
+    public long MaxCvBytes { get; set; } = 5 * 1024 * 1024;
+
+    public IReadOnlyList<int> Expiries() => ExpiryChoices.Count > 0 ? ExpiryChoices : [7, 30, 90];
 }

@@ -30,7 +30,7 @@ Someone else's CV id is always 404 `cv-not-found`.
 
 ## Events
 Publishes `cv.parse.completed` (quest slug → answers; Learner merges without overwriting) and `cv.document.deleted`.
-Consumes `identity.learner.erased` (subscription `cv`). Calls Identity's internal `GET /internal/accounts/email-owner`
+Consumes `identity.learner.erased` (subscription `cv`). Calls Identity's internal `POST /internal/accounts/email-owner` (email in the body)
 for S9.
 
 ## PII

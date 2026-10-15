@@ -24,7 +24,7 @@ XP is credited only by Gamification, with ledger key `learnerId + reason + sourc
 | `learner.job-profile.completed` | Learner | learnerId | Gamification → +50 mission (BR-110), key `mission:job-profile`; Careers → Launchpad mission tick |
 | `learner.programme.enrolled` | Learner | learnerId, programmeCode, paysStipend | Gamification → +100 once per learner (BR-113), key `programme:once` |
 | `learner.feedback.sent` | Learner | learnerId, mood | Gamification → +5 at most once per 30 days (BR-114), decided by Gamification |
-| `learner.photo.changed` | Learner | learnerId, photoUrl | Identity → `AuthUser.photoUrl` |
+| `learner.photo.changed` | Learner | learnerId, photoUrl | Identity → `AuthUser.photoUrl` (subscription `identity`); Gamification → Arena photo |
 | `learner.identity.link-changed` | Learner | learnerId, document, linked | — |
 | `cv.parse.completed` | CV | cvId, learnerId, outcome, prefill | Learner → pre-fill unanswered quest fields |
 | `cv.document.deleted` | CV | cvId, learnerId | Learner |
