@@ -47,6 +47,13 @@ public sealed partial class QuestService(
         }
 
         var saved = await answers.FindAsync(who.Id, slug, cancellationToken);
+        if (saved is null && slug == WhoDis)
+        {
+            // Quest 1 starts with the registered name (A-232), even before the sign-up event has seeded the answers.
+            var learner = await accessor.GetOrCreateAsync(who, cancellationToken);
+            return AnswersJson.ToElement(JsonSerializer.Serialize(new { firstName = learner.FirstName, lastName = learner.LastName }));
+        }
+
         return AnswersJson.ToElement(saved?.AnswersJson ?? AnswersJson.Empty);
     }
 

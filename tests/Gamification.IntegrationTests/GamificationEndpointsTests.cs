@@ -153,6 +153,28 @@ public sealed class GamificationEndpointsTests(GamificationApiFactory api)
     }
 
     [Fact]
+    public async Task Two_updates_of_one_player_at_once_cannot_overwrite_each_other()
+    {
+        var me = await api.JoinAsync("Race", "Condition");
+
+        await using var first = api.Services.CreateAsyncScope();
+        await using var second = api.Services.CreateAsyncScope();
+        first.ServiceProvider.GetRequiredService<TenantOverride>().Set(TestTokens.Tenant);
+        second.ServiceProvider.GetRequiredService<TenantOverride>().Set(TestTokens.Tenant);
+        var a = first.ServiceProvider.GetRequiredService<GamificationDbContext>();
+        var b = second.ServiceProvider.GetRequiredService<GamificationDbContext>();
+        var playerA = await a.Players.SingleAsync(p => p.Id == me);
+        var playerB = await b.Players.SingleAsync(p => p.Id == me);
+
+        playerA.Count("quests.done.work-lore", 1, DateTime.UtcNow);
+        await a.SaveChangesAsync();
+        playerB.Count("quests.done.pick-your-arc", 1, DateTime.UtcNow.AddSeconds(1));
+
+        // The loser fails (its event is retried and re-reads the player) instead of dropping the first counter.
+        await Assert.ThrowsAsync<DbUpdateConcurrencyException>(() => b.SaveChangesAsync());
+    }
+
+    [Fact]
     public async Task No_session_is_401() =>
         Assert.Equal("no-session", await (await api.CreateClient().GetAsync("/api/v1/arena")).ProblemCodeAsync(HttpStatusCode.Unauthorized));
 }

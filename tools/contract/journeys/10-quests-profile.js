@@ -25,7 +25,18 @@ module.exports = async (ctx, j) => {
     r.rows.push({ journey: j, call: `(check) ${label}`, status: ok ? 200 : 0, ms: 0, problems: ok ? [] : [`${label}${detail ? ': ' + detail : ''}`], note: 'extra' });
     return ok;
   };
-  const call = async (c, verb, path, body, status, note = '') => r.record(j, verb, path, await c.call(verb, path, body), status, note);
+  /**
+   * The gateway limits requests per IP per minute (auth-like routes 20/min). Every journey runs from the CI runner's one
+   * IP, which no real learner shares, so a gateway 429 here waits for the next window and tries again.
+   */
+  const send = async (c, verb, path, body) => {
+    for (let i = 0; ; i++) {
+      const res = await c.call(verb, path, typeof body === 'function' ? body() : body);
+      if (res.status !== 429 || res.body?.errors?.code?.[0] !== 'too-many-requests' || i >= 6) return res;
+      await sleep(15000);
+    }
+  };
+  const call = async (c, verb, path, body, status, note = '') => r.record(j, verb, path, await send(c, verb, path, body), status, note);
 
   /** Saves a part like QuestStore.savePart (PUT, `{ values, done, xp }`). Not in contract.json: it goes through the OfflineQueue. */
   const part = (c, slug, n, values, done = true, xp = done) =>
@@ -41,15 +52,29 @@ module.exports = async (ctx, j) => {
     })();
   };
   const upload = async (c, path, field, bytes, name, type, status, note = '') => {
-    const form = new FormData();
-    form.append(field, new Blob([bytes], { type }), name);
-    return r.record(j, 'POST', path, await c.call('POST', path, form), status, note);
+    const form = () => {
+      const f = new FormData();
+      f.append(field, new Blob([bytes], { type }), name);
+      return f;
+    };
+    return r.record(j, 'POST', path, await send(c, 'POST', path, form), status, note);
+  };
+  /**
+   * me/trophies/files is called with `observe: 'events'`; contract.json lists the mapped TrophyUploadEvent
+   * (`{ kind, … }`) instead of the HTTP body the app reads (`{ fileId }`, flex.api.ts), so that shape is checked here.
+   */
+  const uploadTrophyFile = async (c, bytes, name, type, status, note = '') => {
+    const res = await upload(c, 'me/trophies/files', 'file', bytes, name, type, status, note);
+    const row = r.rows[r.rows.length - 1];
+    row.problems = row.problems.filter(p => !p.startsWith('$.kind') && !p.includes('matches no allowed shape'));
+    if (res.status === 200 && typeof res.body?.fileId !== 'string') row.problems.push('$.fileId: expected string');
+    return res;
   };
   /** Events are async (outbox → Service Bus → Gamification): poll me/progress until `done(p)` or ~40 s. */
   const progressUntil = async (c, done) => {
     let last = null;
     for (let i = 0; i < 40; i++) {
-      const res = await c.call('GET', 'me/progress');
+      const res = await send(c, 'GET', 'me/progress');
       last = res;
       if (res.status === 200 && done(res.body)) break;
       await sleep(1000);
@@ -58,7 +83,7 @@ module.exports = async (ctx, j) => {
     return last?.body;
   };
   const ledger = async c => {
-    const res = await c.call('GET', 'me/xp/ledger?page=1&pageSize=100');
+    const res = await send(c, 'GET', 'me/xp/ledger?page=1&pageSize=100');
     r.record(j, 'GET', 'me/xp/ledger', res, 200, 'extra · ledger');
     return res.body?.items ?? [];
   };
@@ -137,7 +162,7 @@ module.exports = async (ctx, j) => {
 
   // Q4 Your Flex Era — skill deck (first 3 = signature moves) · language passport · trophy shelf (a certificate → +20)
   const esco = await call(a, 'GET', 'skills/esco?q=excel&lang=en&limit=24', undefined, [200, 503], 'ESCO may be unreachable from CI');
-  if (esco.status === 200) expect(Array.isArray(esco.body), 'skills/esco returns a list');
+  if (esco.status === 200) expect(Array.isArray(esco.body?.results) && esco.body.results.length > 0, 'skills/esco finds Excel', JSON.stringify(esco.body).slice(0, 200));
   const skills = [
     { id: 'customer-service', name: 'Customer service', category: 'people', level: 3, source: 'suggested' },
     { id: 'microsoft-excel', name: 'Microsoft Excel', category: 'business', level: 3, source: 'search', esco: 'http://data.europa.eu/esco/skill/excel' },
@@ -153,10 +178,11 @@ module.exports = async (ctx, j) => {
   ];
   await part(a, 'your-flex-era', 2, { languages, passportSkipped: false });
   await call(a, 'POST', 'me/trophies/check-link', { url: 'https://www.credly.com/badges/not-a-real-badge/public_url' }, [200, 408, 422, 504], 'public page check');
-  await call(a, 'POST', 'me/trophies/check-link', { url: 'http://localhost/admin' }, [422], 'private address refused');
-  const file = await upload(a, 'me/trophies/files', 'file', PDF, 'nsdc-certificate.pdf', 'application/pdf', 200);
+  const priv = await call(a, 'POST', 'me/trophies/check-link', { url: 'http://localhost/admin' }, 200, 'private address: never fetched, not verified');
+  expect(priv.body?.verified === false, 'a private address is never verified', JSON.stringify(priv.body));
+  const file = await uploadTrophyFile(a, PDF, 'nsdc-certificate.pdf', 'application/pdf', 200);
   expect(typeof file.body?.fileId === 'string' && file.body.fileId.length > 0, 'trophy upload returns a fileId');
-  await upload(a, 'me/trophies/files', 'file', Buffer.from('not really a pdf'), 'fake.pdf', 'application/pdf', 422, 'unsupported-type');
+  await uploadTrophyFile(a, Buffer.from('not really a pdf'), 'fake.pdf', 'application/pdf', 422, 'unsupported-type');
   const digi = await call(a, 'POST', 'me/trophies/digilocker', {}, [200, 503], 'sandbox import');
   if (digi.status === 200) expect(Array.isArray(digi.body) && digi.body.every(t => typeof t.name === 'string'), 'DigiLocker import returns trophies');
   const trophies = [
@@ -199,7 +225,7 @@ module.exports = async (ctx, j) => {
   await complete(a, 'pick-your-arc', QUEST_XP);
 
   // Q7 Drop the Receipts — one proof per claim (keys edu · tl-<id> · tr-<id> · ch-<id>)
-  const proofFile = await upload(a, 'me/trophies/files', 'file', PDF, 'bcom-degree.pdf', 'application/pdf', 200, 'receipt upload');
+  const proofFile = await uploadTrophyFile(a, PDF, 'bcom-degree.pdf', 'application/pdf', 200, 'receipt upload');
   expect(!!proofFile.body?.fileId, 'receipt upload returns a fileId');
   const receipts = {
     edu: { status: 'checking', fileName: 'bcom-degree.pdf', at: '15 Oct 2026' },
@@ -255,7 +281,7 @@ module.exports = async (ctx, j) => {
   expect(cvc.body?.email === email && cvc.body?.location === 'Fort, Mumbai' && cvc.body?.expectedPay === '₹3 – 4.5 LPA', 'cv-contact from the quests', JSON.stringify(cvc.body));
   const about = await call(a, 'PUT', 'job-profile/about', { text: 'Calm on tough calls and quick on Excel.' }, 200);
   expect(about.body?.about?.text === 'Calm on tough calls and quick on Excel.' && about.body?.about?.byMuni === false, 'about rewritten by the learner', JSON.stringify(about.body?.about));
-  await upload(a, 'job-profile/cv', 'file', PDF, 'priya-cv.pdf', 'application/pdf', 200, 'newer CV');
+  await upload(a, 'job-profile/cv', 'cv', PDF, 'priya-cv.pdf', 'application/pdf', 200, 'newer CV');
   await call(a, 'POST', 'job-profile/cv/apply', { ids: [] }, 200);
   const share = await call(a, 'GET', 'job-profile/share', undefined, 200);
   expect(/\/cv\/priya-[a-z0-9]+$/.test(share.body?.url ?? ''), 'share link names the learner', share.body?.url);

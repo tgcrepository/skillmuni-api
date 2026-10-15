@@ -459,7 +459,8 @@ internal static class JobProfileBuilder
                 title = $"{title} · {extra}";
             }
 
-            var school = t.Str("institute", "board");
+            // School levels show their board, like the design's "12th · Commerce (HSC) · Maharashtra State Board".
+            var school = entryLevel is "course" or "education" ? t.Str("institute") : t.Str("board", "institute");
             var detail = string.Join(" · ", new[] { t.Str("year"), Score(t) }.Where(x => x.Length > 0));
             var id = t.Str("id");
             return new EducationItemDto(

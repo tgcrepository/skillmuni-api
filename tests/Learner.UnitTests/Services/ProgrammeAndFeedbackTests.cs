@@ -79,8 +79,17 @@ public sealed class ProgrammeAndFeedbackTests : IAsyncLifetime
     {
         _h.Settings.SampleProgrammes.Add(new Application.SampleProgramme
         {
-            Code = "SKM-JHB-26-0102", Name = "Contact Centre Learnership", Partner = "NQF 4", Centre = "Randburg", BatchStarts = new DateOnly(2026, 10, 12),
-            Duration = "12 months", Stipend = "R6,500 / month", MarksFrom = "12", MinEnglish = 50, MinMaths = 40, Eligibility = "Matric",
+            Code = "SKM-JHB-26-0102",
+            Name = "Contact Centre Learnership",
+            Partner = "NQF 4",
+            Centre = "Randburg",
+            BatchStarts = new DateOnly(2026, 10, 12),
+            Duration = "12 months",
+            Stipend = "R6,500 / month",
+            MarksFrom = "12",
+            MinEnglish = 50,
+            MinMaths = 40,
+            Eligibility = "Matric",
         });
         var who = LearnerHarness.NewLearner();
 
