@@ -69,6 +69,8 @@ public sealed class LearnerEndpointsTests(LearnerApiFactory api)
         var contact = await (await client.GetAsync("/api/v1/job-profile/cv-contact")).JsonAsync(HttpStatusCode.OK);
         Assert.Equal(JsonValueKind.Null, contact.GetProperty("linkedin").ValueKind);
 
+        // The learner's own deck: the CV read can't pre-fill it (their answers win), so its new skill is a suggestion.
+        await client.PutJsonAsync("/api/v1/me/quests/your-flex-era/parts/1", new { values = new { skills = new[] { new { name = "Excel", level = 2 } } }, done = false });
         var prefill = new Dictionary<string, object>
         {
             ["your-flex-era"] = new { skills = new[] { new { name = "Freshdesk", level = 2 } } },
