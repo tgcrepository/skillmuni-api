@@ -3,6 +3,7 @@ using Learner.Application.Contracts;
 using Learner.Application.Services;
 using Microsoft.AspNetCore.Mvc;
 using SkillMuni.Web.Errors;
+using SkillMuni.Web.Idempotency;
 
 namespace Learner.Api.Controllers;
 
@@ -26,6 +27,7 @@ public sealed class QuestsController(IQuestService quests, IProgressService prog
 
     /// <summary>xpEarned is 0 when the quest was already complete.</summary>
     [HttpPost("quests/{slug}/complete")]
+    [Idempotent]
     public async Task<IActionResult> Complete(string slug, CancellationToken cancellationToken) =>
         (await quests.CompleteAsync(CurrentLearner, slug, cancellationToken)).ToActionResult(this);
 }

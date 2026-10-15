@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using SkillMuni.Web.Auth;
 using SkillMuni.Web.Errors;
+using SkillMuni.Web.Idempotency;
 
 namespace Identity.Api.Controllers;
 
@@ -16,6 +17,7 @@ namespace Identity.Api.Controllers;
 public sealed class AdminClaimsController(IClaimService claims, IOptions<AuthOptions> authOptions) : IdentityControllerBase(authOptions)
 {
     [HttpPost]
+    [Idempotent]
     public async Task<IActionResult> Create(CreateClaimRequest request, CancellationToken cancellationToken) =>
         (await claims.CreateAsync(request, cancellationToken))
             .ToActionResult(this, created => Created($"/api/v1/claims/{Uri.EscapeDataString(created.Token)}", created));

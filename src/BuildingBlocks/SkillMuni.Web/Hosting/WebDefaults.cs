@@ -14,6 +14,7 @@ using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using SkillMuni.Common.Tenancy;
+using SkillMuni.Web.Caching;
 using SkillMuni.Web.Correlation;
 using SkillMuni.Web.Errors;
 using SkillMuni.Web.Tenancy;
@@ -51,6 +52,7 @@ public static class WebDefaults
     {
         builder.AddSkillMuniPlatform(serviceName);
         var services = builder.Services;
+        services.AddSkillMuniCache(builder.Configuration, serviceName);
 
         services.AddControllers(o => o.Filters.Add<ValidationFilter>());
         services.Configure<ApiBehaviorOptions>(o => o.InvalidModelStateResponseFactory = context =>

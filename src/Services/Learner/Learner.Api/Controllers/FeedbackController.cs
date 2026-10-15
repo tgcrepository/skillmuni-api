@@ -2,6 +2,7 @@ using Asp.Versioning;
 using Learner.Application.Contracts;
 using Learner.Application.Services;
 using Microsoft.AspNetCore.Mvc;
+using SkillMuni.Web.Idempotency;
 
 namespace Learner.Api.Controllers;
 
@@ -12,6 +13,7 @@ public sealed class FeedbackController(IFeedbackService feedback) : LearnerContr
 {
     /// <summary>The XP earned: 5 at most once every 30 days, otherwise 0.</summary>
     [HttpPost]
+    [Idempotent]
     public async Task<ActionResult<FeedbackResultDto>> Send(FeedbackRequest request, CancellationToken cancellationToken) =>
         await feedback.SendAsync(CurrentLearner, request, cancellationToken);
 }

@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using SkillMuni.Web.Auth;
 using SkillMuni.Web.Errors;
+using SkillMuni.Web.Idempotency;
 
 namespace Identity.Api.Controllers;
 
@@ -63,6 +64,7 @@ public sealed class AuthController(
 
     /// <summary>"Join the squad". 409 email-taken · 422 consent-required.</summary>
     [HttpPost("register")]
+    [Idempotent]
     public async Task<IActionResult> Register(RegisterRequest request, CancellationToken cancellationToken) =>
         (await registration.RegisterAsync(request, cancellationToken)).ToActionResult(this);
 

@@ -10,8 +10,6 @@ namespace Microsoft.Extensions.DependencyInjection;
 public static class GamificationInfrastructureServiceCollectionExtensions
 {
     public const string ConnectionStringName = "Gamification";
-    public const string RedisConnectionStringName = "Redis";
-
     /// <summary>MySQL, repositories, the board cache, outbox and every event handler.</summary>
     public static IServiceCollection AddGamificationInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
@@ -34,19 +32,7 @@ public static class GamificationInfrastructureServiceCollectionExtensions
         services.AddScoped<BoardQueries>();
         services.AddScoped<IBoardQueries, CachedBoardQueries>();
 
-        var redis = configuration.GetConnectionString(RedisConnectionStringName);
-        if (string.IsNullOrWhiteSpace(redis))
-        {
-            services.AddDistributedMemoryCache();
-        }
-        else
-        {
-            services.AddStackExchangeRedisCache(o =>
-            {
-                o.Configuration = redis;
-                o.InstanceName = "skillmuni:";
-            });
-        }
+        // IDistributedCache (Redis in Azure) comes from AddSkillMuniServiceDefaults.
 
         services.AddSkillMuniMessaging<GamificationDbContext>();
         services.AddSkillMuniEventConsumer<GamificationDbContext>();

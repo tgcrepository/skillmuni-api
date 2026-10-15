@@ -68,7 +68,8 @@ jobs:
           {
             echo "### CI results (${GITHUB_SHA::7}): ${{ job.status }}"
             echo '```'
-            grep -E "^(Passed|Failed)!" ci.log | sed -E "s/ \(net[0-9.]+\)//" || true
+            grep -E "(Passed|Failed)! +-" ci.log | sed -E "s/^.*((Passed|Failed)!)/\1/; s/ \(net[0-9.]+\)//" || true
+            echo "Tests passed: $(grep -cE '^\s+Passed ' ci.log), failed: $(grep -cE '^\s+Failed ' ci.log)"
             echo '```'
             echo '```'
             grep -E -A4 ": error |error [A-Z]+[0-9]+|warning [A-Z]+[0-9]+|Failed |Error Message|Assert\.|has-pending|Unhandled|Exception:" ci.log | grep -v -E "^\s+at (System|Microsoft|Xunit|MySql)\." \

@@ -4,6 +4,7 @@ using Learner.Application.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Net.Http.Headers;
 using SkillMuni.Web.Errors;
+using SkillMuni.Web.Idempotency;
 
 namespace Learner.Api.Controllers;
 
@@ -39,6 +40,7 @@ public sealed class ProfileController(IProfileService profile) : LearnerControll
 
     /// <summary>Multipart field <c>photo</c>: JPG, PNG, WEBP or HEIC up to 5 MB.</summary>
     [HttpPost("photo")]
+    [Idempotent]
     [RequestSizeLimit(MaxPhotoUpload)]
     [RequestFormLimits(MultipartBodyLengthLimit = MaxPhotoUpload)]
     public async Task<IActionResult> UploadPhoto(IFormFile? photo, CancellationToken cancellationToken) =>

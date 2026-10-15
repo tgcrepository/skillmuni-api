@@ -7,6 +7,7 @@ using Microsoft.Extensions.Options;
 using SkillMuni.Common.Paging;
 using SkillMuni.Web.Auth;
 using SkillMuni.Web.Errors;
+using SkillMuni.Web.Idempotency;
 
 namespace Identity.Api.Controllers;
 
@@ -25,6 +26,7 @@ public sealed class AccountController(
         Ok(await consents.ListAsync(CurrentAccountId, PageRequest.Create(page, pageSize), cancellationToken));
 
     [HttpPost("consents")]
+    [Idempotent]
     public async Task<IActionResult> RecordConsent(RecordConsentRequest request, CancellationToken cancellationToken) =>
         (await consents.RecordAsync(CurrentAccountId, request, cancellationToken))
             .ToActionResult(this, consent => Created($"/api/v1/me/consents?scope={Uri.EscapeDataString(consent.Scope)}", consent));
@@ -43,6 +45,7 @@ public sealed class AccountController(
 
     /// <summary>202: every service assembles its part; the learner is notified when the export is ready.</summary>
     [HttpPost("data-export")]
+    [Idempotent]
     public async Task<IActionResult> RequestExport(CancellationToken cancellationToken) =>
         (await privacy.RequestExportAsync(CurrentAccountId, cancellationToken)).ToActionResult(this, accepted => Accepted(accepted));
 

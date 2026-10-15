@@ -3,6 +3,7 @@ using Gamification.Application;
 using Gamification.Application.Services;
 using Microsoft.AspNetCore.Mvc;
 using SkillMuni.Web.Errors;
+using SkillMuni.Web.Idempotency;
 
 namespace Gamification.Api.Controllers;
 
@@ -17,11 +18,13 @@ public sealed class ArenaController(IArenaService arena) : GamificationControlle
         (await arena.BoardAsync(LearnerId, scope ?? "everyone", period ?? "week", cancellationToken)).ToActionResult(this);
 
     [HttpPost("players/{id:guid}/cheer")]
+    [Idempotent]
     public async Task<IActionResult> Cheer(Guid id, CheerRequest request, CancellationToken cancellationToken) =>
         (await arena.CheerAsync(LearnerId, id, request.On, cancellationToken)).ToActionResult(this);
 
     /// <summary>204. A friendly one-week XP race; results wait on the Arena rules (MISS-11).</summary>
     [HttpPost("players/{id:guid}/challenge")]
+    [Idempotent]
     public async Task<IActionResult> Challenge(Guid id, CancellationToken cancellationToken) =>
         (await arena.ChallengeAsync(LearnerId, id, cancellationToken)).ToActionResult(this);
 }

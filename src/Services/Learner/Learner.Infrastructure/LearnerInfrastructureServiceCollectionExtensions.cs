@@ -14,8 +14,6 @@ namespace Microsoft.Extensions.DependencyInjection;
 public static class LearnerInfrastructureServiceCollectionExtensions
 {
     public const string ConnectionStringName = "Learner";
-    public const string RedisConnectionStringName = "Redis";
-
     /// <summary>MySQL, repositories, Blob Storage, field encryption, outside APIs, cache, outbox and event consumer.</summary>
     public static IServiceCollection AddLearnerInfrastructure(
         this IServiceCollection services,
@@ -56,20 +54,7 @@ public static class LearnerInfrastructureServiceCollectionExtensions
         // Files: Blob Storage with managed identity in Azure; in memory for local runs without Azurite.
         services.AddSkillMuniBlobStorage(configuration, environment, "Learner:Storage", "learner-files");
 
-        // Redis for the IFSC / ESCO caches when configured (CLAUDE.md §8), else per-replica memory.
-        var redis = configuration.GetConnectionString(RedisConnectionStringName);
-        if (string.IsNullOrWhiteSpace(redis))
-        {
-            services.AddDistributedMemoryCache();
-        }
-        else
-        {
-            services.AddStackExchangeRedisCache(o =>
-            {
-                o.Configuration = redis;
-                o.InstanceName = "skillmuni:";
-            });
-        }
+        // IDistributedCache (Redis in Azure) comes from AddSkillMuniServiceDefaults.
 
         // Outside APIs: typed clients with retry, timeout and circuit breaker (CLAUDE.md §9).
         services.AddHttpClient<IBankDirectory, RazorpayBankDirectory>(c => c.BaseAddress = new Uri(RazorpayBankDirectory.BaseAddress))

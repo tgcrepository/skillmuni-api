@@ -23,6 +23,7 @@
     <PackageVersion Include="Yarp.ReverseProxy" Version="2.3.0" />
     <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.10.0" />
     <PackageVersion Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="$(AspNetCoreVersion)" />
+    <PackageVersion Include="Microsoft.Azure.StackExchangeRedis" Version="3.2.1" />
   </ItemGroup>
   <ItemGroup Label="Data">
     <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="$(EfCoreVersion)" />

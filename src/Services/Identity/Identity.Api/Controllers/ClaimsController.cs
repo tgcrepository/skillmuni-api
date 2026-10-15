@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using SkillMuni.Web.Auth;
 using SkillMuni.Web.Errors;
+using SkillMuni.Web.Idempotency;
 
 namespace Identity.Api.Controllers;
 
@@ -37,11 +38,13 @@ public sealed class ClaimsController(IClaimService claims, IOptions<AuthOptions>
         (await claims.ConsentAsync(token, CurrentAccountId, request, cancellationToken)).ToActionResult(this);
 
     [HttpPost("sections/{slug}/confirm")]
+    [Idempotent]
     [Authorize(Policy = Policies.Learner)]
     public async Task<IActionResult> ConfirmSection(string token, string slug, CancellationToken cancellationToken) =>
         (await claims.ConfirmSectionAsync(token, CurrentAccountId, slug, cancellationToken)).ToActionResult(this);
 
     [HttpPost("finish")]
+    [Idempotent]
     [Authorize(Policy = Policies.Learner)]
     public async Task<IActionResult> Finish(string token, CancellationToken cancellationToken) =>
         (await claims.FinishAsync(token, CurrentAccountId, cancellationToken)).ToActionResult(this);

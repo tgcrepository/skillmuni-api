@@ -567,6 +567,50 @@ resource redis 'Microsoft.Cache/redis@2024-03-01' = {
   }
 }
 
+// Each service signs in to Redis with its own managed identity (Entra); access keys are disabled.
+resource redisAccessIdentity 'Microsoft.Cache/redis/accessPolicyAssignments@2024-03-01' = {
+  parent: redis
+  name: 'ca-identity'
+  properties: {
+    accessPolicyName: 'Data Contributor'
+    objectId: identityAppId.properties.principalId
+    objectIdAlias: 'ca-identity'
+  }
+}
+
+resource redisAccessLearner 'Microsoft.Cache/redis/accessPolicyAssignments@2024-03-01' = {
+  parent: redis
+  name: 'ca-learner'
+  dependsOn: [redisAccessIdentity] // Redis applies one access-policy change at a time.
+  properties: {
+    accessPolicyName: 'Data Contributor'
+    objectId: learnerAppId.properties.principalId
+    objectIdAlias: 'ca-learner'
+  }
+}
+
+resource redisAccessCv 'Microsoft.Cache/redis/accessPolicyAssignments@2024-03-01' = {
+  parent: redis
+  name: 'ca-cv'
+  dependsOn: [redisAccessLearner] // Redis applies one access-policy change at a time.
+  properties: {
+    accessPolicyName: 'Data Contributor'
+    objectId: cvAppId.properties.principalId
+    objectIdAlias: 'ca-cv'
+  }
+}
+
+resource redisAccessGamification 'Microsoft.Cache/redis/accessPolicyAssignments@2024-03-01' = {
+  parent: redis
+  name: 'ca-gamification'
+  dependsOn: [redisAccessCv] // Redis applies one access-policy change at a time.
+  properties: {
+    accessPolicyName: 'Data Contributor'
+    objectId: gamificationAppId.properties.principalId
+    objectIdAlias: 'ca-gamification'
+  }
+}
+
 // ---------- Container Apps ----------
 resource apps 'Microsoft.App/managedEnvironments@2024-03-01' = {
   name: 'cae-${prefix}'
@@ -587,11 +631,12 @@ var originEnv = [for (origin, i) in allowedOrigins: { name: 'Gateway__AllowedOri
 var commonEnv = [
   { name: 'ASPNETCORE_ENVIRONMENT', value: isProd ? 'Production' : 'Staging' }
   { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING', value: insights.properties.ConnectionString }
+  { name: 'Redis__Host', value: '${redis.properties.hostName}:${redis.properties.sslPort}' }
 ]
 
 module identityApp 'modules/container-app.bicep' = {
   name: 'ca-identity'
-  dependsOn: [acrPullIdentity, vaultIdentity]
+  dependsOn: [acrPullIdentity, vaultIdentity, redisAccessIdentity]
   params: {
     name: 'ca-identity'
     location: location
@@ -620,7 +665,7 @@ module identityApp 'modules/container-app.bicep' = {
 
 module learnerApp 'modules/container-app.bicep' = {
   name: 'ca-learner'
-  dependsOn: [acrPullLearner, vaultLearner, learnerSendsEvents, learnerReceivesEvents, learnerWritesFiles]
+  dependsOn: [acrPullLearner, vaultLearner, learnerSendsEvents, learnerReceivesEvents, learnerWritesFiles, redisAccessLearner]
   params: {
     name: 'ca-learner'
     location: location
@@ -649,7 +694,7 @@ module learnerApp 'modules/container-app.bicep' = {
 
 module cvApp 'modules/container-app.bicep' = {
   name: 'ca-cv'
-  dependsOn: [acrPullCv, vaultCv, cvSendsEvents, cvReceivesEvents, cvWritesFiles, cvReadsDocuments]
+  dependsOn: [acrPullCv, vaultCv, cvSendsEvents, cvReceivesEvents, cvWritesFiles, cvReadsDocuments, redisAccessCv]
   params: {
     name: 'ca-cv'
     location: location
@@ -678,7 +723,7 @@ module cvApp 'modules/container-app.bicep' = {
 
 module gamificationApp 'modules/container-app.bicep' = {
   name: 'ca-gamification'
-  dependsOn: [acrPullGamification, vaultGamification, gamificationSendsEvents, gamificationReceivesEvents]
+  dependsOn: [acrPullGamification, vaultGamification, gamificationSendsEvents, gamificationReceivesEvents, redisAccessGamification]
   params: {
     name: 'ca-gamification'
     location: location

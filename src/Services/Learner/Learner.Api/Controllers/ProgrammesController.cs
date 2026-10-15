@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SkillMuni.Web.Auth;
 using SkillMuni.Web.Errors;
+using SkillMuni.Web.Idempotency;
 
 namespace Learner.Api.Controllers;
 
@@ -23,6 +24,7 @@ public sealed class ProgrammesController(IProgrammeService programmes) : Learner
         (await programmes.FindIfscAsync(code, cancellationToken)).ToActionResult(this);
 
     [HttpPost("me/programme")]
+    [Idempotent]
     public async Task<IActionResult> Submit(ProgrammeSubmission submission, CancellationToken cancellationToken) =>
         (await programmes.SubmitAsync(CurrentLearner, submission, cancellationToken)).ToActionResult(this);
 }

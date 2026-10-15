@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Headers;
+using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using SkillMuni.Messaging.Inbox;
@@ -214,6 +215,32 @@ public sealed class LearnerEndpointsTests(LearnerApiFactory api)
         var skills = await (await client.GetAsync("/api/v1/skills/esco?q=excel&lang=en&limit=5")).JsonAsync(HttpStatusCode.OK);
         Assert.Equal("excel", skills.GetProperty("results")[0].GetProperty("label").GetString());
         Assert.Equal("esco-unavailable", await (await client.GetAsync("/api/v1/skills/esco?q=esco-down")).ProblemCodeAsync(HttpStatusCode.ServiceUnavailable));
+    }
+
+    [Fact]
+    public async Task A_retried_post_with_the_same_idempotency_key_replays_the_first_response()
+    {
+        var client = api.CreateLearnerClient();
+        var feedback = new { mood = 4, tags = new[] { "fun" }, comment = "Retry me", screen = "/home" };
+
+        async Task<HttpResponseMessage> SendAsync(string key, object body)
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/me/feedback") { Content = JsonContent.Create(body) };
+            request.Headers.Add("Idempotency-Key", key);
+            return await client.SendAsync(request);
+        }
+
+        var first = await SendAsync("feedback-1", feedback);
+        Assert.Equal(5, (await first.JsonAsync(HttpStatusCode.OK)).GetProperty("xp").GetInt32());
+        Assert.False(first.Headers.Contains("Idempotent-Replayed"));
+
+        var retry = await SendAsync("feedback-1", feedback);
+        Assert.Equal(5, (await retry.JsonAsync(HttpStatusCode.OK)).GetProperty("xp").GetInt32());
+        Assert.Equal("true", retry.Headers.GetValues("Idempotent-Replayed").Single());
+
+        Assert.Equal(0, (await (await client.PostJsonAsync("/api/v1/me/feedback", feedback)).JsonAsync(HttpStatusCode.OK)).GetProperty("xp").GetInt32());
+        Assert.Equal("idempotency-key-reused", await (await SendAsync("feedback-1", new { mood = 1, tags = Array.Empty<string>(), comment = "Other", screen = "/home" })).ProblemCodeAsync(HttpStatusCode.UnprocessableEntity));
+        Assert.Equal("invalid-idempotency-key", await (await SendAsync("not a valid key!", feedback)).ProblemCodeAsync(HttpStatusCode.BadRequest));
     }
 
     [Fact]

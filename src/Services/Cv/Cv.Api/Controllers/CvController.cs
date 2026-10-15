@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using SkillMuni.Common.Security;
 using SkillMuni.Web.Auth;
 using SkillMuni.Web.Errors;
+using SkillMuni.Web.Idempotency;
 
 namespace Cv.Api.Controllers;
 
@@ -25,6 +26,7 @@ public sealed class CvController(ICvService cvs) : ControllerBase
 
     /// <summary>Multipart field <c>file</c>, or several <c>pages</c> (photos of a paper CV). 201 with <c>{ cvId }</c>.</summary>
     [HttpPost]
+    [Idempotent]
     [RequestSizeLimit(MaxUpload)]
     [RequestFormLimits(MultipartBodyLengthLimit = MaxUpload)]
     public async Task<IActionResult> Upload(IFormFile? file, [FromForm] List<IFormFile>? pages, CancellationToken cancellationToken)
