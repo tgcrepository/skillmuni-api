@@ -324,6 +324,9 @@ module.exports = async (ctx, j) => {
       expect(`GET arena ${scope}/${period}`, b.body?.week?.length === 7 && b.body?.rewards?.coins === 0 && b.body?.rewards?.voucher === null, 'week of 7, no coins/vouchers (A-317)');
     }
   }
+  const fresh = r.record(j, 'GET', 'arena?scope=everyone&period=week', await rival.call('GET', 'arena?scope=everyone&period=week'), 200, 'a learner with no XP yet');
+  const freshYou = fresh.body?.players?.find(p => p.you);
+  expect('GET arena (no XP)', freshYou && freshYou.xp === 0 && fresh.body?.me?.rank === freshYou.rank && fresh.body?.me?.rank > 1, `a learner with 0 XP still sees themself below the earners, got me ${JSON.stringify(fresh.body?.me)}`);
   r.record(j, 'GET', 'arena?scope=galaxy&period=week', await me.call('GET', 'arena?scope=galaxy&period=week'), 422, 'unknown scope');
   const rivalId = (await rival.call('GET', 'session')).body?.id;
   const meId = (await me.call('GET', 'session')).body?.id;

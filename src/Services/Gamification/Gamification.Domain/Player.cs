@@ -51,6 +51,13 @@ public sealed class Player : Entity
 
     public DateTime UpdatedAt { get; private set; }
 
+    /// <summary>
+    /// Optimistic concurrency: bumped on every save that changes the row. Events for one learner are handled in
+    /// parallel (Service Bus delivers several at once), so two handlers must not both write totals they read before
+    /// the other's commit; the loser's transaction fails and its event is redelivered.
+    /// </summary>
+    public int Version { get; private set; }
+
     public string Initials => string.Concat(Name.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(w => char.ToUpperInvariant(w[0])));
 
     public IReadOnlyList<string> Showcase => JsonSerializer.Deserialize<List<string>>(ShowcaseJson) ?? [];
