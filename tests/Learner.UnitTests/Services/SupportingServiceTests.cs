@@ -144,7 +144,7 @@ public sealed class SupportingServiceTests
         var who = LearnerHarness.NewLearner();
         await _h.FinishQuestsAsync(who, 1);
         _h.Store.Events.Clear();
-        var handler = new ClaimConfirmedHandler(_h.Store, _h.Catalog, _h.JobProfileCompletion, _h.Store, _h.Clock, NullLogger<ClaimConfirmedHandler>.Instance);
+        var handler = new ClaimConfirmedHandler(_h.Store, _h.Catalog, _h.JobProfileCompletion, _h.Store, _h.TenantContext, _h.Clock, NullLogger<ClaimConfirmedHandler>.Instance);
 
         await handler.HandleAsync(new ClaimConfirmed(Guid.NewGuid(), who.Id) { TenantId = LearnerHarness.Tenant }, _ct);
         await handler.HandleAsync(new ClaimConfirmed(Guid.NewGuid(), who.Id) { TenantId = LearnerHarness.Tenant }, _ct);
@@ -165,11 +165,26 @@ public sealed class SupportingServiceTests
         var who = LearnerHarness.NewLearner();
         await _h.ProgressAsync(who);
 
-        await new ClaimConfirmedHandler(_h.Store, _h.Catalog, _h.JobProfileCompletion, _h.Store, _h.Clock, NullLogger<ClaimConfirmedHandler>.Instance)
+        await new ClaimConfirmedHandler(_h.Store, _h.Catalog, _h.JobProfileCompletion, _h.Store, _h.TenantContext, _h.Clock, NullLogger<ClaimConfirmedHandler>.Instance)
             .HandleAsync(new ClaimConfirmed(Guid.NewGuid(), who.Id) { TenantId = LearnerHarness.Tenant }, _ct);
 
         var xp = (_h.Store.EventsOf<QuestStepCompleted>().Count(s => s.Paid) * 20) + (_h.Store.EventsOf<QuestCompleted>().Count() * 50);
         Assert.Equal(550, xp);
+    }
+
+    [Fact]
+    public async Task Claim_confirmed_before_the_registration_event_still_pays_and_the_name_follows()
+    {
+        var id = Guid.NewGuid();
+
+        await new ClaimConfirmedHandler(_h.Store, _h.Catalog, _h.JobProfileCompletion, _h.Store, _h.TenantContext, _h.Clock, NullLogger<ClaimConfirmedHandler>.Instance)
+            .HandleAsync(new ClaimConfirmed(Guid.NewGuid(), id) { TenantId = LearnerHarness.Tenant }, _ct);
+        await new AccountRegisteredHandler(_h.Store, _h.Store, _h.Clock)
+            .HandleAsync(new AccountRegistered(id, "Aarav", "Mehta", null, "+919876544521", "IN", "claim") { TenantId = LearnerHarness.Tenant }, _ct);
+
+        var learner = Assert.Single(_h.Store.Learners);
+        Assert.Equal(("Aarav Mehta", "+919876544521", 5), (learner.FullName, learner.Phone, learner.QuestsCompleted));
+        Assert.Equal(5, _h.Store.EventsOf<QuestCompleted>().Count());
     }
 
     [Fact]
