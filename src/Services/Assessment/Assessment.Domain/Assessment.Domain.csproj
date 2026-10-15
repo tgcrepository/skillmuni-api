@@ -1,0 +1,3 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Domain: entities, content records and the scoring rules. No framework or package references. -->
+</Project>
