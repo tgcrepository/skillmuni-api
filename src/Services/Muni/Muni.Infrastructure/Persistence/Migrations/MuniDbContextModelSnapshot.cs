@@ -86,6 +86,10 @@ namespace Muni.Infrastructure.Persistence.Migrations
                         .HasColumnType("varchar(100)")
                         .HasColumnName("archetype");
 
+                    b.Property<DateTime?>("ErasedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("erased_at");
+
                     b.Property<string>("FirstName")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -137,6 +141,11 @@ namespace Muni.Infrastructure.Persistence.Migrations
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("updated_at");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("int")
+                        .HasColumnName("version");
 
                     b.HasKey("Id");
 
