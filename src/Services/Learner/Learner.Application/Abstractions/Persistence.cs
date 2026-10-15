@@ -25,6 +25,9 @@ public interface IQuestAnswersRepository
     /// <summary>Slug → answers JSON for every quest the learner has saved (one query, for A-262).</summary>
     Task<IReadOnlyDictionary<string, string>> ListAsync(Guid learnerId, CancellationToken cancellationToken);
 
+    /// <summary>When any of the learner's quest answers last changed (the Job Profile's "updated").</summary>
+    Task<DateTime?> LastUpdatedAsync(Guid learnerId, CancellationToken cancellationToken);
+
     void Add(QuestAnswers answers);
 }
 
@@ -64,6 +67,13 @@ public interface IFeedbackRepository
     Task<DateTime?> LastXpAwardAsync(Guid learnerId, CancellationToken cancellationToken);
 
     void Add(Feedback feedback);
+}
+
+public interface IJobProfileRepository
+{
+    Task<JobProfileSettings?> FindAsync(Guid learnerId, CancellationToken cancellationToken);
+
+    void Add(JobProfileSettings settings);
 }
 
 public interface ITrophyFileRepository

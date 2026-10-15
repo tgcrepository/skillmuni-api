@@ -44,14 +44,18 @@ public sealed record BadgeDefinition(
     string? CtaLabel = null,
     string? CtaUrl = null,
     bool Secret = false,
-    IReadOnlyList<int>? Tiers = null)
+    IReadOnlyList<int>? Tiers = null,
+    string? Image = null)
 {
     public bool Tracked => Counter is not null;
+
+    /// <summary>One of the 8 registration-quest badges, the only ones Phase 1 awards (§4.3).</summary>
+    public bool IsQuest => Id.StartsWith(BadgeCatalogue.QuestPrefix, StringComparison.Ordinal);
 }
 
 /// <summary>
-/// The badge library (Figma My Badges 170:4660; catalogue "to confirm", note 177:7597): one badge per registration
-/// quest (A-292) plus the 48 in the mock, with rules where their events exist.
+/// The badge library (BRD §4.3, Figma My Badges 170:4660): one badge per registration quest (A-292) plus the 48-badge
+/// catalogue, with rules where their events exist. Only the quest badges are awarded in Phase 1.
 /// </summary>
 public static class BadgeCatalogue
 {
@@ -137,9 +141,12 @@ public static class BadgeCatalogue
                 Counters.QuestDone(q.Slug),
                 1,
                 CtaLabel: "Continue quest",
-                CtaUrl: $"/quests/{q.Slug}"))
+                CtaUrl: $"/quests/{q.Slug}",
+                Image: $"assets/quests/quest-{q.Number}.png"))
             .Concat(Fixed)
             .ToList();
 
-    public static string QuestBadgeId(string slug) => $"quest-{slug}";
+    public const string QuestPrefix = "quest-";
+
+    public static string QuestBadgeId(string slug) => $"{QuestPrefix}{slug}";
 }

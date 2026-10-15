@@ -9,7 +9,10 @@ using SkillMuni.Common.Tenancy;
 
 namespace Learner.Application.Services;
 
-/// <summary>API-040 / A-274: in-app feedback; +5 XP at most once every 30 days.</summary>
+/// <summary>
+/// API-040 / A-274: in-app feedback. Gamification decides the +5 (BR-114, at most once every 30 days); the <c>xp</c>
+/// returned here is the same rule applied to Learner's own record of the last paid feedback, for the toast.
+/// </summary>
 public interface IFeedbackService
 {
     Task<FeedbackResultDto> SendAsync(LearnerRef who, FeedbackRequest request, CancellationToken cancellationToken);
@@ -40,7 +43,7 @@ public sealed class FeedbackService(
             request.Screen?.Trim() ?? string.Empty,
             earnsXp,
             now));
-        outbox.Add(new FeedbackSent(who.Id, request.Mood, earnsXp) { TenantId = tenant.TenantId });
+        outbox.Add(new FeedbackSent(who.Id, request.Mood) { TenantId = tenant.TenantId });
 
         var xp = earnsXp ? options.Value.Xp.Feedback : 0;
         learner.RecordAwardedXp(xp, now);

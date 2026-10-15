@@ -21,8 +21,10 @@ public sealed class LearnerHarness
         var options = MsOptions.Create(Settings);
         Catalog = new QuestCatalog(Settings.QuestCatalog());
         Accessor = new LearnerAccessor(Store, TenantContext, Clock);
-        Progress = new ProgressService(Accessor, Clock, options);
-        Quests = new QuestService(Accessor, Store, Progress, Catalog, Store, Store, TenantContext, Clock, options, NullLogger<QuestService>.Instance);
+        Progress = new ProgressService(Clock, options);
+        ProfileProgress = new ProfileProgressService(Store, Store, Catalog);
+        JobProfileCompletion = new JobProfileCompletion(Store, ProfileProgress, Catalog, Store, Clock);
+        Quests = new QuestService(Accessor, Store, Progress, Catalog, JobProfileCompletion, Store, Store, TenantContext, Clock, options, NullLogger<QuestService>.Instance);
         Drafts = new DraftService(Store, Store, TenantContext, Clock, options);
         IdentityLinks = new IdentityLinkService(Accessor, Store, DigiLocker, Store, Store, TenantContext, Clock);
         Programmes = new ProgrammeService(Accessor, Store, Store, Banks, Encryptor, Progress, Store, Store, TenantContext, Clock, options, NullLogger<ProgrammeService>.Instance);
@@ -31,7 +33,7 @@ public sealed class LearnerHarness
         Trophies = new TrophyService(Accessor, Store, Store, Blobs, Links, DigiLocker, Store, TenantContext, Clock, options);
         Skills = new SkillSearchService(Esco);
         Preferences = new PreferencesService(Accessor, Store, Clock);
-        ProfileProgress = new ProfileProgressService(Store, Store, Catalog);
+        JobProfile = new JobProfileService(Accessor, Store, Store, ProfileProgress, Blobs, Store, TenantContext, Clock, options);
     }
 
     public LearnerServiceOptions Settings { get; } = new();
@@ -80,12 +82,20 @@ public sealed class LearnerHarness
 
     public ProfileProgressService ProfileProgress { get; }
 
+    public JobProfileCompletion JobProfileCompletion { get; }
+
+    public JobProfileService JobProfile { get; }
+
     public static LearnerRef NewLearner(string firstName = "Asha", string market = "IN") => new(Guid.NewGuid(), firstName, market);
 
     public static SavePartRequest Part(object values, bool done = true, bool? xp = null) =>
         new(JsonSerializer.SerializeToElement(values), done, xp, null);
 
     public LearnerProfile Learner(LearnerRef who) => Store.Learners.Single(l => l.Id == who.Id);
+
+    /// <summary>The progress block Learner's XP responses carry (creates the learner like a first request would).</summary>
+    public async Task<LearnerProgressDto> ProgressAsync(LearnerRef who) =>
+        Progress.For(await Accessor.GetOrCreateAsync(who, CancellationToken.None));
 
     /// <summary>Finishes quests 1..n the way the screens do: every part, then complete.</summary>
     public async Task FinishQuestsAsync(LearnerRef who, int count)

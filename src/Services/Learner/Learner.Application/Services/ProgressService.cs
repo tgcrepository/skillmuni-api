@@ -7,25 +7,20 @@ namespace Learner.Application.Services;
 public sealed record LevelInfo(int Level, string Rank, int Start, int Target);
 
 /// <summary>
-/// API-125 and the progress block every XP-earning response returns. One level ladder everywhere (A-249), applied
-/// to the XP on display so the HUD never shows a level that disagrees with the XP.
+/// The progress block every XP-earning Learner response returns (quest completion, programme). One level ladder
+/// everywhere (A-249), applied to the XP on display. <c>GET me/progress</c> itself is Gamification's (BR-138).
 /// </summary>
 public interface IProgressService
 {
-    Task<LearnerProgressDto> GetAsync(LearnerRef who, CancellationToken cancellationToken);
-
     LearnerProgressDto For(LearnerProfile learner);
 
     LevelInfo LevelFor(int xp);
 }
 
-public sealed class ProgressService(ILearnerAccessor accessor, TimeProvider clock, IOptions<LearnerServiceOptions> options) : IProgressService
+public sealed class ProgressService(TimeProvider clock, IOptions<LearnerServiceOptions> options) : IProgressService
 {
     /// <summary>How long a just-awarded amount is shown before Gamification's totals must confirm it.</summary>
     public static readonly TimeSpan EstimateWindow = TimeSpan.FromMinutes(5);
-
-    public async Task<LearnerProgressDto> GetAsync(LearnerRef who, CancellationToken cancellationToken) =>
-        For(await accessor.GetOrCreateAsync(who, cancellationToken));
 
     public LearnerProgressDto For(LearnerProfile learner)
     {
