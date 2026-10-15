@@ -1,6 +1,6 @@
 # Backend progress · SkillMuni India Phase 1
 
-Updated 15 Oct 2026. Repo: GitHub `tgcrepository/skillmuni-api`, branch `main` (PRs #1–#8 merged). CI runs on every PR
+Updated 16 Oct 2026. Repo: GitHub `tgcrepository/skillmuni-api`, branch `main` (PRs #1–#8 merged). CI runs on every PR
 and on `main`.
 
 ## Status: Phase 1 backend complete
@@ -27,6 +27,42 @@ and on `main`.
   filter (Bicep and the local emulator) lists exactly the events it handles (checked by script, 15 Oct).
 - **CI on `main`: all green** — build (0 warnings), format, vulnerable packages, migrations match the model,
   ~510 unit + integration tests (Testcontainers MySQL), 10 Docker images, Bicep.
+
+## Full regression (16 Oct) — launch readiness
+The whole system now runs on every PR and on `main` with **docker compose in GitHub Actions** (`.github/workflows/e2e.yml`):
+MySQL, the Service Bus emulator, Redis, Azurite, all 9 services and the gateway, exactly as deployed. Journeys in
+`tools/contract/journeys/` then drive the API the way the Angular app does (cookie session, real field names from the
+app's source) and check every response against the app's TypeScript types (`tools/contract/contract.json`, extracted
+from `src/app/core/**/*.api.ts` by `tools/contract/extract-contract.js`).
+
+**Result on `main`: 130 / 130 frontend calls covered, 721 checks, 0 problems; 539 unit + integration tests passing.**
+
+Defects found and fixed by the regression (all with tests):
+- Local stack didn't start: MySQL init script stopped MySQL (`set -u`), Service Bus emulator TTL above its 1 h limit,
+  SQL Edge retired (now SQL Server 2022), services crashed while MySQL warmed up (restart policy).
+- Identity: a Service Bus outage while sending a code was a 500 → now 503 `notifications-unavailable`; re-sign-up after
+  erasure blocked by a used code; claim confirmed before registration lost quests 1–5 and 550 XP.
+- Gamification: parallel events for one learner overwrote each other (lost XP, wrong quest counts, double feedback XP)
+  → `players.version` concurrency token + one event at a time per replica + dispatcher retry; Rewards read XP from the
+  player row instead of the ledger; Arena dropped players with no XP and sent `photo: null`; Arena GET could 500.
+- Learner: quest step keys and Job Profile / careers-profile field names didn't match the app's quests (guessed
+  before the frontend source was available) → now read the real fields; no programme codes in Development; ESCO,
+  CV and Careers responses sent `null` for optional fields the app types as absent; duplicate-row races on
+  `job_profiles`, `quest_answers`, `lobby_states`.
+- Careers: the Applied tab ignored the sort.
+- Muni: two suggestion chips fell back to "I don't have that one yet"; late events resurrected erased learners.
+- Erasure: every service now keeps a tombstone and answers 410 `learner-erased` instead of recreating an empty profile
+  from a still-valid token.
+- Gateway: security headers (nosniff, frame DENY, CSP, HSTS), problem+json 404 for unknown routes, rate limits that
+  no longer block a shared college network (1200/min per IP, 120 on auth), plus a per-account limit (600/min).
+
+Owner questions raised by the regression:
+- **810 vs 760 XP after registration:** the 8 quests pay 760 (BR-103) and finishing them takes the Job Profile to 100%,
+  which pays the "Finish job profile" mission +50 (BR-110) → **810 XP, level 3 Trailblazer** (the app's own Quest 8
+  card already says "Level 3 · Trailblazer"). BRD §4.2 says a learner who finishes all quests is a level 2
+  Pathfinder. Which one is right?
+- **Career Clarity badge:** with catalogue badges off for Phase 1 (B-50) it shows "100% in progress" after the
+  assessment instead of "earned". OK for launch?
 
 ## Chat log
 **15 Oct · Chat 1: first build.** Repo moved to GitHub and restructured. First compile and test run fixed
@@ -109,6 +145,11 @@ merged one by one with CI green after each merge.
 | B-66 | Muni history: messages < 30 min apart form one conversation; history and ratings deleted after `Muni:HistoryDays` (default 90) | Retention policy open (BRD §9) |
 | B-67 | Platform: postal data = mock codes plus a starter set behind `IPostalDirectory` (Redis cached); theme and market config served from seed/config | No geo provider decided |
 | B-68 | Platform notifications: sandbox sender for SMS / email / push / WhatsApp (masked recipient logged, code never stored); defaults push + email on, WhatsApp + SMS opt-in; badges become bell notifications | Provider open (BRD §9) |
+| B-69 | Full regression in CI (`e2e` workflow) against the whole stack, journeys checked against the app's types; every PR must stay at 0 problems | Owner asked for launch readiness and zero frontend conflicts |
+| B-70 | Gamification: `players.version` optimistic concurrency, one event at a time per replica, and the inbox dispatcher retries a lost save race up to 4 times | Parallel events lost XP and counters |
+| B-71 | Erasure tombstones (`erased_learners`: id + time only, no tenant) in every service that creates learner rows lazily; requests answer 410 `learner-erased`, late events are skipped | Tokens stay valid up to 10 min after erasure |
+| B-72 | A Service Bus outage while sending a code answers 503 `notifications-unavailable` (DependencyUnavailableException → global handler) | Codes are never stored in plain text, so they can't go through the outbox |
+| B-73 | Gateway limits: 1200/min per IP, 120/min per IP on auth routes, 600/min per signed-in account; security headers on every response | A college's shared IP must not lock out a class |
 
 ## For the frontend (pass to a developer)
 - Set `environment.apiBaseUrl` to `/api/v1`. API and app must be same-site (cookies are SameSite=Lax).
