@@ -59,14 +59,17 @@ jobs:
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         run: set -o pipefail; dotnet test SkillMuni.sln -c Release --no-build --logger "trx" --logger "console;verbosity=normal" --collect:"XPlat Code Coverage" --results-directory TestResults 2>&1 | tee -a ci.log
 
-      - name: Post failures to the pull request
-        if: failure() && github.event_name == 'pull_request'
+      - name: Post results to the pull request
+        if: ${{ !cancelled() && github.event_name == 'pull_request' }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           touch ci.log
           {
-            echo "### CI failure summary (${GITHUB_SHA::7})"
+            echo "### CI results (${GITHUB_SHA::7}): ${{ job.status }}"
+            echo '```'
+            grep -E "^(Passed|Failed)!" ci.log | sed -E "s/ \(net[0-9.]+\)//" || true
+            echo '```'
             echo '```'
             grep -E -A4 ": error |error [A-Z]+[0-9]+|warning [A-Z]+[0-9]+|Failed |Error Message|Assert\.|has-pending|Unhandled|Exception:" ci.log | grep -v -E "^\s+at (System|Microsoft|Xunit|MySql)\." \
               | sed -E "s|$GITHUB_WORKSPACE/||g; s/ \[[^]]*\.csproj[^]]*\]$//" | awk '!seen[$0]++' | head -600
