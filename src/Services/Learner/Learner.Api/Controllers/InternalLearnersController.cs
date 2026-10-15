@@ -15,10 +15,15 @@ namespace Learner.Api.Controllers;
 [ApiExplorerSettings(IgnoreApi = true)]
 [Route("internal/learners")]
 [AllowAnonymous]
-public sealed class InternalLearnersController(IProfileProgressService profileProgress) : ControllerBase
+public sealed class InternalLearnersController(IProfileProgressService profileProgress, ICareersProfileService careersProfile) : ControllerBase
 {
     /// <summary>A-262 completeness, quest by quest.</summary>
     [HttpGet("{learnerId:guid}/profile-progress")]
     public async Task<IActionResult> ProfileProgress(Guid learnerId, CancellationToken cancellationToken) =>
         (await profileProgress.GetAsync(learnerId, cancellationToken)).ToActionResult(this);
+
+    /// <summary>For Careers' matching: name, masked mobile, city/state, relocate and the skill deck with evidence; 404 without a learner.</summary>
+    [HttpGet("{learnerId:guid}/careers-profile")]
+    public async Task<IActionResult> CareersProfile(Guid learnerId, CancellationToken cancellationToken) =>
+        (await careersProfile.GetAsync(learnerId, cancellationToken)).ToActionResult(this);
 }

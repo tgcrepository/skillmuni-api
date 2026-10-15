@@ -38,6 +38,7 @@ renders (A-262: one record built from the 8 quests, no second form).
 | GET/PUT | `job-profile/share` | API-073/074 `{ url, hideContact, expiresDays, viewsThisWeek }`; hide contact by default, 30 days; `expiresDays` 7 · 30 · 90 (A-208); views are 0 until the public CV page exists |
 | PUT | `admin/programmes/{code}` | tenant-admin |
 | GET | `/internal/learners/{id}/profile-progress` | A-262, internal ingress only |
+| GET | `/internal/learners/{id}/careers-profile` | Careers matching, internal ingress only: `{ name, contact, city, state, relocate, skills: [{ name, evidence }] }` from the quests: Quest 1 name; Quest 2 mobile (masked like the Profile), city and state (`region`); Quest 6 relocate (`relocate` flag, else "relocate" in `where`, null if unanswered); Quest 4 deck, evidence `verified` when the skill's entry or a verified trophy / Quest 7 receipt naming it is verified, else `declared` (`assessed` and `level` belong to Assessment and languages, not this list); 404 `learner-not-found` |
 
 `profile/contact/*` (API-118/119) stays in Identity (A-273).
 
