@@ -1,4 +1,4 @@
-// SkillMuni API platform on Azure: Container Apps (gateway, Identity, Learner, CV, Gamification), MySQL Flexible Server, Service Bus,
+// SkillMuni API platform on Azure: Container Apps (gateway, Identity, Learner, CV, Gamification, Assessment), MySQL Flexible Server, Service Bus,
 // Key Vault, Blob Storage, Document Intelligence, Redis, Container Registry and monitoring. Each app has its own user-assigned managed identity
 // with roles scoped to the single resource it needs (CLAUDE.md §6).
 //
@@ -80,6 +80,13 @@ var gamificationEvents = [
 ]
 var gamificationEventsQuoted = [for e in gamificationEvents: '\'${e}\'']
 
+// Events the Assessment service consumes (Career Drivers journey rows and erasure).
+var assessmentEvents = [
+  'identity.learner.registered'
+  'identity.learner.erased'
+]
+var assessmentEventsQuoted = [for e in assessmentEvents: '\'${e}\'']
+
 // ---------- Monitoring ----------
 resource logs 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
   name: 'log-${prefix}'
@@ -118,6 +125,11 @@ resource cvAppId 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' =
 
 resource gamificationAppId 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
   name: 'id-${prefix}-gamification'
+  location: location
+}
+
+resource assessmentAppId 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
+  name: 'id-${prefix}-assessment'
   location: location
 }
 
@@ -170,6 +182,16 @@ resource acrPullGamification 'Microsoft.Authorization/roleAssignments@2022-04-01
   properties: {
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roles.acrPull)
     principalId: gamificationAppId.properties.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
+resource acrPullAssessment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(registry.id, assessmentAppId.id, roles.acrPull)
+  scope: registry
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roles.acrPull)
+    principalId: assessmentAppId.properties.principalId
     principalType: 'ServicePrincipal'
   }
 }
@@ -234,6 +256,16 @@ resource vaultGamification 'Microsoft.Authorization/roleAssignments@2022-04-01' 
   properties: {
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roles.keyVaultSecretsUser)
     principalId: gamificationAppId.properties.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
+resource vaultAssessment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(vault.id, assessmentAppId.id, roles.keyVaultSecretsUser)
+  scope: vault
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roles.keyVaultSecretsUser)
+    principalId: assessmentAppId.properties.principalId
     principalType: 'ServicePrincipal'
   }
 }
@@ -312,6 +344,12 @@ resource cvDatabase 'Microsoft.DBforMySQL/flexibleServers/databases@2023-12-30' 
 resource gamificationDatabase 'Microsoft.DBforMySQL/flexibleServers/databases@2023-12-30' = {
   parent: mysql
   name: 'gamification'
+  properties: { charset: 'utf8mb4', collation: 'utf8mb4_0900_ai_ci' }
+}
+
+resource assessmentDatabase 'Microsoft.DBforMySQL/flexibleServers/databases@2023-12-30' = {
+  parent: mysql
+  name: 'assessment'
   properties: { charset: 'utf8mb4', collation: 'utf8mb4_0900_ai_ci' }
 }
 
@@ -511,6 +549,45 @@ resource gamificationReceivesEvents 'Microsoft.Authorization/roleAssignments@202
   }
 }
 
+resource assessmentSubscription 'Microsoft.ServiceBus/namespaces/topics/subscriptions@2022-10-01-preview' = {
+  parent: eventsTopic
+  name: 'assessment'
+  properties: {
+    maxDeliveryCount: 10
+    lockDuration: 'PT1M'
+    deadLetteringOnMessageExpiration: true
+  }
+}
+
+resource assessmentSubscriptionFilter 'Microsoft.ServiceBus/namespaces/topics/subscriptions/rules@2022-10-01-preview' = {
+  parent: assessmentSubscription
+  name: '$Default'
+  properties: {
+    filterType: 'SqlFilter'
+    sqlFilter: { sqlExpression: 'sys.Label IN (${join(assessmentEventsQuoted, ', ')})' }
+  }
+}
+
+resource assessmentSendsEvents 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(eventsTopic.id, assessmentAppId.id, roles.serviceBusDataSender)
+  scope: eventsTopic
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roles.serviceBusDataSender)
+    principalId: assessmentAppId.properties.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
+resource assessmentReceivesEvents 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(assessmentSubscription.id, assessmentAppId.id, roles.serviceBusDataReceiver)
+  scope: assessmentSubscription
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roles.serviceBusDataReceiver)
+    principalId: assessmentAppId.properties.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
 // ---------- Blob Storage (profile photos, certificate files, CVs): private, Entra-only ----------
 resource storage 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   name: 'st${take(compact, 22)}'
@@ -642,6 +719,17 @@ resource redisAccessGamification 'Microsoft.Cache/redis/accessPolicyAssignments@
     accessPolicyName: 'Data Contributor'
     objectId: gamificationAppId.properties.principalId
     objectIdAlias: 'ca-gamification'
+  }
+}
+
+resource redisAccessAssessment 'Microsoft.Cache/redis/accessPolicyAssignments@2024-03-01' = {
+  parent: redis
+  name: 'ca-assessment'
+  dependsOn: [redisAccessGamification] // Redis applies one access-policy change at a time.
+  properties: {
+    accessPolicyName: 'Data Contributor'
+    objectId: assessmentAppId.properties.principalId
+    objectIdAlias: 'ca-assessment'
   }
 }
 
@@ -782,6 +870,32 @@ module gamificationApp 'modules/container-app.bicep' = {
   }
 }
 
+module assessmentApp 'modules/container-app.bicep' = {
+  name: 'ca-assessment'
+  dependsOn: [acrPullAssessment, vaultAssessment, assessmentSendsEvents, assessmentReceivesEvents, redisAccessAssessment]
+  params: {
+    name: 'ca-assessment'
+    location: location
+    environmentId: apps.id
+    identityId: assessmentAppId.id
+    identityClientId: assessmentAppId.properties.clientId
+    image: '${registry.properties.loginServer}/skillmuni-assessment:${imageTag}'
+    registryServer: registry.properties.loginServer
+    externalIngress: false
+    minReplicas: isProd ? 2 : 1
+    secrets: [
+      { name: 'assessment-db', keyVaultUrl: '${vault.properties.vaultUri}secrets/assessment-db-connection', identity: assessmentAppId.id }
+      { name: 'auth-public-key', keyVaultUrl: '${vault.properties.vaultUri}secrets/auth-signing-public-key', identity: assessmentAppId.id }
+    ]
+    env: concat(commonEnv, [
+      { name: 'ConnectionStrings__Assessment', secretRef: 'assessment-db' }
+      { name: 'Auth__SigningPublicKeyPem', secretRef: 'auth-public-key' }
+      { name: 'ServiceBus__FullyQualifiedNamespace', value: '${bus.name}.servicebus.windows.net' }
+      { name: 'ServiceBus__Subscription', value: assessmentSubscription.name }
+    ])
+  }
+}
+
 module gatewayApp 'modules/container-app.bicep' = {
   name: 'ca-gateway'
   dependsOn: [acrPullGateway, vaultGateway]
@@ -805,6 +919,7 @@ module gatewayApp 'modules/container-app.bicep' = {
       { name: 'ReverseProxy__Clusters__learner__Destinations__primary__Address', value: 'http://ca-learner/' }
       { name: 'ReverseProxy__Clusters__cv__Destinations__primary__Address', value: 'http://ca-cv/' }
       { name: 'ReverseProxy__Clusters__gamification__Destinations__primary__Address', value: 'http://ca-gamification/' }
+      { name: 'ReverseProxy__Clusters__assessment__Destinations__primary__Address', value: 'http://ca-assessment/' }
     ], originEnv)
   }
 }

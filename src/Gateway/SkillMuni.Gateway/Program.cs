@@ -77,6 +77,7 @@ if (app.Environment.IsDevelopment())
         o.SwaggerEndpoint("/openapi/learner/v1.json", "Learner v1");
         o.SwaggerEndpoint("/openapi/cv/v1.json", "CV v1");
         o.SwaggerEndpoint("/openapi/gamification/v1.json", "Gamification v1");
+        o.SwaggerEndpoint("/openapi/assessment/v1.json", "Assessment v1");
     });
 }
 

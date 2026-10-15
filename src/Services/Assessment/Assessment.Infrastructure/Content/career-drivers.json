@@ -1,0 +1,622 @@
+{
+  "pairs": [
+    {
+      "n": 1,
+      "this": {
+        "text": "I aim for a lifestyle where I can comfortably afford the experiences and things I want.",
+        "driver": "A"
+      },
+      "that": {
+        "text": "I want to have a strong voice in decisions and influence outcomes that matter.",
+        "driver": "B"
+      }
+    },
+    {
+      "n": 2,
+      "this": {
+        "text": "I need to feel that my work contributes to something meaningful and worthwhile.",
+        "driver": "C"
+      },
+      "that": {
+        "text": "I want to develop deep expertise in my field and be recognized for it.",
+        "driver": "D"
+      }
+    },
+    {
+      "n": 3,
+      "this": {
+        "text": "I want opportunities to innovate, design, or bring fresh ideas to life.",
+        "driver": "E"
+      },
+      "that": {
+        "text": "It’s important for me to work in a supportive, collaborative environment.",
+        "driver": "F"
+      }
+    },
+    {
+      "n": 4,
+      "this": {
+        "text": "I value flexibility and autonomy to decide how I work and what I focus on.",
+        "driver": "G"
+      },
+      "that": {
+        "text": "I want the stability and security of knowing my future is financially and professionally predictable.",
+        "driver": "H"
+      }
+    },
+    {
+      "n": 5,
+      "this": {
+        "text": "I take pride in being respected and recognized for my achievements.",
+        "driver": "I"
+      },
+      "that": {
+        "text": "I want to enjoy the financial freedom that comes with success.",
+        "driver": "A"
+      }
+    },
+    {
+      "n": 6,
+      "this": {
+        "text": "I want to influence and guide others toward shared goals.",
+        "driver": "B"
+      },
+      "that": {
+        "text": "I’m motivated by doing work that aligns deeply with my personal values.",
+        "driver": "C"
+      }
+    },
+    {
+      "n": 7,
+      "this": {
+        "text": "I want to master specialized skills and be seen as a go-to expert.",
+        "driver": "D"
+      },
+      "that": {
+        "text": "I want to create original ideas or work that carries my personal signature.",
+        "driver": "E"
+      }
+    },
+    {
+      "n": 8,
+      "this": {
+        "text": "Building meaningful, friendly relationships at work is essential to me.",
+        "driver": "F"
+      },
+      "that": {
+        "text": "I enjoy deciding how I structure my day and tasks.",
+        "driver": "G"
+      }
+    },
+    {
+      "n": 9,
+      "this": {
+        "text": "I’m motivated by being able to afford a high-quality lifestyle.",
+        "driver": "A"
+      },
+      "that": {
+        "text": "I want to demonstrate to myself and others that I truly know my craft.",
+        "driver": "D"
+      }
+    },
+    {
+      "n": 10,
+      "this": {
+        "text": "My work should reflect my personal sense of purpose.",
+        "driver": "C"
+      },
+      "that": {
+        "text": "I want the things I produce to clearly carry my name or identity.",
+        "driver": "E"
+      }
+    },
+    {
+      "n": 11,
+      "this": {
+        "text": "I want to afford whatever I need without financial stress.",
+        "driver": "A"
+      },
+      "that": {
+        "text": "Having a stable, long-term career matters a lot to me.",
+        "driver": "H"
+      }
+    },
+    {
+      "n": 12,
+      "this": {
+        "text": "I enjoy leading, influencing, and mobilizing people.",
+        "driver": "B"
+      },
+      "that": {
+        "text": "I would enjoy becoming a respected specialist in my field.",
+        "driver": "D"
+      }
+    },
+    {
+      "n": 13,
+      "this": {
+        "text": "It matters to me that my work makes a positive difference in the world.",
+        "driver": "C"
+      },
+      "that": {
+        "text": "Having close, trusting relationships at work is very important to me.",
+        "driver": "F"
+      }
+    },
+    {
+      "n": 14,
+      "this": {
+        "text": "I want my personal creativity to shine through in what I do.",
+        "driver": "E"
+      },
+      "that": {
+        "text": "I’d prefer to chart my own course rather than follow strict directions.",
+        "driver": "G"
+      }
+    },
+    {
+      "n": 15,
+      "this": {
+        "text": "Working closely with people I like gives me a special sense of fulfillment.",
+        "driver": "F"
+      },
+      "that": {
+        "text": "Knowing that my future is financially and professionally secure is critical.",
+        "driver": "H"
+      }
+    },
+    {
+      "n": 16,
+      "this": {
+        "text": "I want to have enough money to live comfortably and pursue my interests.",
+        "driver": "A"
+      },
+      "that": {
+        "text": "I want to be innovative in my work and take on new challenges.",
+        "driver": "E"
+      }
+    },
+    {
+      "n": 17,
+      "this": {
+        "text": "I feel energized when I’m guiding, directing, or leading others.",
+        "driver": "B"
+      },
+      "that": {
+        "text": "I feel happiest when I’m surrounded by people I connect with.",
+        "driver": "F"
+      }
+    },
+    {
+      "n": 18,
+      "this": {
+        "text": "I see my career as part of something meaningful and bigger than myself.",
+        "driver": "C"
+      },
+      "that": {
+        "text": "I like taking full responsibility for my decisions and direction.",
+        "driver": "G"
+      }
+    },
+    {
+      "n": 19,
+      "this": {
+        "text": "I’d love to be recognized as a leading expert in my domain.",
+        "driver": "D"
+      },
+      "that": {
+        "text": "Feeling that my career path is stable and predictable makes me comfortable.",
+        "driver": "H"
+      }
+    },
+    {
+      "n": 20,
+      "this": {
+        "text": "A comfortable and financially strong lifestyle motivates me.",
+        "driver": "A"
+      },
+      "that": {
+        "text": "Meeting and connecting with new people through work excites me.",
+        "driver": "F"
+      }
+    },
+    {
+      "n": 21,
+      "this": {
+        "text": "I enjoy being in positions where I can set direction for others.",
+        "driver": "B"
+      },
+      "that": {
+        "text": "Choosing my own tasks and priorities is important to me.",
+        "driver": "G"
+      }
+    },
+    {
+      "n": 22,
+      "this": {
+        "text": "I’m willing to work hard if I believe the outcome truly matters.",
+        "driver": "C"
+      },
+      "that": {
+        "text": "I’d feel reassured knowing where I stand financially in the long run.",
+        "driver": "H"
+      }
+    },
+    {
+      "n": 23,
+      "this": {
+        "text": "Strong bonds with colleagues make it difficult for me to leave a job.",
+        "driver": "F"
+      },
+      "that": {
+        "text": "Being acknowledged as part of an influential community is important to me.",
+        "driver": "I"
+      }
+    },
+    {
+      "n": 24,
+      "this": {
+        "text": "I’d enjoy taking charge of teams, projects, or resources.",
+        "driver": "B"
+      },
+      "that": {
+        "text": "I want to create or build something that’s entirely new.",
+        "driver": "E"
+      }
+    },
+    {
+      "n": 25,
+      "this": {
+        "text": "I prefer to do what I deeply believe is right, even if it doesn’t boost my career.",
+        "driver": "C"
+      },
+      "that": {
+        "text": "Being publicly recognized for my contributions matters to me.",
+        "driver": "I"
+      }
+    },
+    {
+      "n": 26,
+      "this": {
+        "text": "I want to do something that sets me apart from others.",
+        "driver": "E"
+      },
+      "that": {
+        "text": "I usually prefer the secure and stable option.",
+        "driver": "H"
+      }
+    },
+    {
+      "n": 27,
+      "this": {
+        "text": "I want others to look to me for leadership.",
+        "driver": "B"
+      },
+      "that": {
+        "text": "Social prestige and status are strong motivators for me.",
+        "driver": "I"
+      }
+    },
+    {
+      "n": 28,
+      "this": {
+        "text": "A high standard of living motivates me.",
+        "driver": "A"
+      },
+      "that": {
+        "text": "I want to avoid being tightly controlled by a boss or rigid system.",
+        "driver": "G"
+      }
+    },
+    {
+      "n": 29,
+      "this": {
+        "text": "I want the work I do to clearly reflect my personal identity.",
+        "driver": "E"
+      },
+      "that": {
+        "text": "I value formal recognition and acknowledgment of my achievements.",
+        "driver": "I"
+      }
+    },
+    {
+      "n": 30,
+      "this": {
+        "text": "I prefer to be the one making decisions and taking charge.",
+        "driver": "B"
+      },
+      "that": {
+        "text": "It worries me when my professional future feels uncertain.",
+        "driver": "H"
+      }
+    },
+    {
+      "n": 31,
+      "this": {
+        "text": "I want to be known as someone with valuable specialist knowledge.",
+        "driver": "D"
+      },
+      "that": {
+        "text": "I would find satisfaction in working independently without constant oversight.",
+        "driver": "G"
+      }
+    },
+    {
+      "n": 32,
+      "this": {
+        "text": "I dislike feeling like just another number in a large system.",
+        "driver": "G"
+      },
+      "that": {
+        "text": "I’d enjoy having a high-prestige position in my field.",
+        "driver": "I"
+      }
+    },
+    {
+      "n": 33,
+      "this": {
+        "text": "I’m prepared to work harder for better financial rewards.",
+        "driver": "A"
+      },
+      "that": {
+        "text": "I see my work as a way to grow as a person.",
+        "driver": "C"
+      }
+    },
+    {
+      "n": 34,
+      "this": {
+        "text": "I’d like to hold a position that commands respect and visibility.",
+        "driver": "I"
+      },
+      "that": {
+        "text": "I’m consistently drawn to roles with stable futures.",
+        "driver": "H"
+      }
+    },
+    {
+      "n": 35,
+      "this": {
+        "text": "When the people I work with are my friends, nothing else matters as much.",
+        "driver": "F"
+      },
+      "that": {
+        "text": "Making expert contributions to my field gives me great satisfaction.",
+        "driver": "D"
+      }
+    },
+    {
+      "n": 36,
+      "this": {
+        "text": "I’d enjoy the recognition and respect that come with senior roles.",
+        "driver": "I"
+      },
+      "that": {
+        "text": "I want to be highly competent in my specialization.",
+        "driver": "D"
+      }
+    }
+  ],
+  "islands": [
+    {
+      "n": 1,
+      "name": "Vibe Check",
+      "emoji": "🌅",
+      "from": 1,
+      "to": 9
+    },
+    {
+      "n": 2,
+      "name": "Main Character",
+      "emoji": "🎬",
+      "from": 10,
+      "to": 18
+    },
+    {
+      "n": 3,
+      "name": "Plot Twist",
+      "emoji": "🌀",
+      "from": 19,
+      "to": 27
+    },
+    {
+      "n": 4,
+      "name": "Final Form",
+      "emoji": "👑",
+      "from": 28,
+      "to": 36
+    }
+  ],
+  "drivers": [
+    {
+      "id": "A",
+      "name": "Material Rewards",
+      "emoji": "💰",
+      "focus": "Financial growth, lifestyle, tangible benefits",
+      "definition": "Refers to the desire for financial security, wealth, and the ability to enjoy a high standard of living. People driven by material rewards make career choices that enhance their economic well-being. They seek roles with competitive compensation and are often willing to take on challenging or less fulfilling work if it provides significant financial returns.",
+      "blurb": "Good pay and the lifestyle it buys keep you going.",
+      "strengthZones": "Sales, high-commission roles, entrepreneurship, competitive industries",
+      "families": "Sales & retail, commercial roles, high-income tracks"
+    },
+    {
+      "id": "B",
+      "name": "Power / Influence",
+      "emoji": "⚡",
+      "focus": "Impact, decision-making, leadership",
+      "definition": "Reflects the motivation to shape decisions, direct people or resources, and play a central role in key choices. These individuals aim for positions where they can influence outcomes, set direction, and make important decisions. Confident and proactive, they thrive in leadership, strategic, or policy-making roles.",
+      "blurb": "You want a say in where things go, and to lead people there.",
+      "strengthZones": "Supervisory roles, team leads, managerial tracks, operations control",
+      "families": "Leadership, operations, management tracks"
+    },
+    {
+      "id": "C",
+      "name": "Meaning / Purpose",
+      "emoji": "🌍",
+      "focus": "Contribution, values, positive impact",
+      "definition": "Centers on being motivated by work that aligns with personal beliefs, values, or a sense of higher purpose. These individuals want to make a meaningful contribution through social impact, education, sustainability, or ethical work. Personal fulfillment matters more than short-term rewards.",
+      "blurb": "Work has to matter. You want to make a real difference.",
+      "strengthZones": "CSR, NGOs, climate action, education, public sector, mission-driven roles",
+      "families": "Education, social impact, public sector"
+    },
+    {
+      "id": "D",
+      "name": "Expertise",
+      "emoji": "🎯",
+      "focus": "Mastery, specialization, professional excellence",
+      "definition": "Reflects the desire to build deep knowledge and skills in a specific field. People with this driver focus on developing and maintaining specialist capabilities, preferring to work within their areas of strength. Their greatest satisfaction comes from being recognized as credible experts and staying current through continuous learning.",
+      "blurb": "You want to master your craft and be the go-to person for it.",
+      "strengthZones": "Technical specialists, analysts, engineers, finance experts, niche consulting",
+      "families": "Specialist tracks, technical roles, finance, engineering"
+    },
+    {
+      "id": "E",
+      "name": "Creativity",
+      "emoji": "🎨",
+      "focus": "Innovation, originality, self-expression",
+      "definition": "Represents the motivation to generate new ideas, solutions, or original work. Creative individuals thrive on solving problems in new ways, pushing boundaries, and bringing unique ideas to life, whether through product design, entrepreneurship, research, or artistic pursuits.",
+      "blurb": "You bring fresh ideas to life and leave your signature on the work.",
+      "strengthZones": "Product design, marketing, entrepreneurship, R&D",
+      "families": "Innovation, design, marketing, entrepreneurship"
+    },
+    {
+      "id": "F",
+      "name": "Affiliation",
+      "emoji": "🤝",
+      "focus": "Connection, belonging, meaningful relationships",
+      "definition": "Highlights the value placed on close, supportive relationships at work. People with this driver prioritize trust, collaboration, and human connection. They often choose to stay in roles because of the people they work with and derive a sense of purpose through relationships rather than hierarchy.",
+      "blurb": "The people you work with make or break a job for you.",
+      "strengthZones": "Customer service, teaching, people management, HR, hospitality",
+      "families": "People-facing roles, HR, education, service"
+    },
+    {
+      "id": "G",
+      "name": "Autonomy",
+      "emoji": "🧭",
+      "focus": "Freedom, flexibility, independence",
+      "definition": "Reflects the desire to control one’s time, decisions, and work methods. People with this driver thrive in environments that allow them to make their own choices, often avoiding rigid hierarchies and bureaucracy. They excel in roles like freelancing, consulting, or entrepreneurship where independence is valued.",
+      "blurb": "You want control over your time, decisions and how you work.",
+      "strengthZones": "Freelancing, entrepreneurship, field work, consulting",
+      "families": "Freelancing, consulting, entrepreneurship"
+    },
+    {
+      "id": "H",
+      "name": "Security",
+      "emoji": "🛡️",
+      "focus": "Stability, predictability, reduced risk",
+      "definition": "Focuses on valuing stability and a clear sense of the future. These individuals prioritize avoiding unnecessary risks and ensuring long-term reliability. They often seek employers known for stability and prefer well-defined career paths that offer predictability and peace of mind.",
+      "blurb": "You like stability, clear paths and knowing where you stand.",
+      "strengthZones": "Government jobs, large corporates, banking, administrative operations",
+      "families": "Administrative, government, stable large organisations"
+    },
+    {
+      "id": "I",
+      "name": "Status",
+      "emoji": "🏆",
+      "focus": "Recognition, prestige, social esteem",
+      "definition": "Reflects the desire to be acknowledged, respected, and admired by others. People with this driver are motivated by visible recognition: titles, awards, networks, or association with prestigious institutions. They actively build their reputation and seek opportunities that elevate their professional profile.",
+      "blurb": "Recognition, respect and visible achievement.",
+      "strengthZones": "Client-facing roles, leadership, public representation, luxury sectors",
+      "families": "Client relations, leadership, public-facing roles"
+    }
+  ],
+  "archetypes": [
+    {
+      "id": "people-first",
+      "name": "The People-First Service Builder",
+      "emoji": "🤝",
+      "dominant": [
+        "F",
+        "H"
+      ],
+      "secondary": [
+        "C",
+        "B"
+      ],
+      "roles": "Customer service, client success, HR service, training, hospitality, community operations",
+      "redFlags": "Solitary specialist roles with little people contact; high-risk startups",
+      "summary": "You do your best work with people you trust, somewhere steady. Best-fit roles: customer service, client success, HR service, training, hospitality and community operations."
+    },
+    {
+      "id": "rainmaker",
+      "name": "The Commercial Rainmaker",
+      "emoji": "💼",
+      "dominant": [
+        "A",
+        "I"
+      ],
+      "secondary": [
+        "B",
+        "G"
+      ],
+      "roles": "Retail & B2C/B2B sales, business development, key accounts, luxury, revenue leadership",
+      "redFlags": "Low-upside admin roles; back-office analyst work with no customer exposure",
+      "summary": "You chase big wins and like being seen for them. Best-fit roles: retail and B2B sales, business development, key accounts, luxury and revenue leadership."
+    },
+    {
+      "id": "specialist",
+      "name": "The Specialist Operator",
+      "emoji": "🔧",
+      "dominant": [
+        "D",
+        "H"
+      ],
+      "secondary": [
+        "G"
+      ],
+      "roles": "Technical specialist, finance/ops analyst, engineering, compliance, process excellence",
+      "redFlags": "Highly ambiguous “build-as-you-go” creative roles; pure sales",
+      "summary": "You go deep, get it right and like a clear path. Best-fit roles: technical specialist, finance or ops analyst, engineering, compliance and process excellence."
+    },
+    {
+      "id": "pathfinder",
+      "name": "The Creative Pathfinder",
+      "emoji": "🌈",
+      "dominant": [
+        "E",
+        "G"
+      ],
+      "secondary": [
+        "I",
+        "A"
+      ],
+      "roles": "Product/design, marketing/content, R&D/innovation, creative consultancy, founder",
+      "redFlags": "Rigid bureaucracy; narrow repetitive tasks with no room for ideas",
+      "summary": "You light up when you can create, try new things and own how you work. Best-fit roles: product and design, marketing and content, R&D, creative consultancy, founding something."
+    },
+    {
+      "id": "purpose",
+      "name": "The Purpose-Driven Community Leader",
+      "emoji": "🌱",
+      "dominant": [
+        "C",
+        "F"
+      ],
+      "secondary": [
+        "D",
+        "B"
+      ],
+      "roles": "Education/edtech, NGOs, climate/sustainability, public service, L&D, social programs",
+      "redFlags": "Purely money/status-driven cultures; hard-sell commercial roles",
+      "summary": "You want your work to matter and to bring people with you. Best-fit roles: education and edtech, NGOs, climate and sustainability, public service, L&D and social programmes."
+    },
+    {
+      "id": "strategist",
+      "name": "The Strategic Leader",
+      "emoji": "👑",
+      "dominant": [
+        "B",
+        "I"
+      ],
+      "secondary": [
+        "A"
+      ],
+      "eitherOf": [
+        "D",
+        "G"
+      ],
+      "roles": "Senior leadership, strategy, policy, business unit heads, organizational shapers, entrepreneurial ventures",
+      "redFlags": "Roles with low autonomy, low visibility, or purely operational with no decision-making scope",
+      "summary": "You want to set direction and be the one people look to. Best-fit roles: senior leadership, strategy, policy, business unit heads and entrepreneurial ventures."
+    }
+  ]
+}
