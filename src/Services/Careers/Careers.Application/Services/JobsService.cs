@@ -202,7 +202,12 @@ public sealed partial class JobsService(
         };
 
         var pool = ListEngine.Text(rows, query.Q, string.Empty, r => r.View.Job);
-        var hits = pool.Where(r => ListEngine.Passes(r, query.Filters, Get)).ToList();
+        // Applied tab sorts (jobs-filters.ts): "updated" (default, recently updated) or "newest" (date applied).
+        var filtered = pool.Where(r => ListEngine.Passes(r, query.Filters, Get));
+        var hits = (query.Sort == "newest"
+                ? filtered.OrderByDescending(r => r.Application.AppliedAt)
+                : filtered.OrderByDescending(r => r.Application.UpdatedAt).ThenByDescending(r => r.Application.AppliedAt))
+            .ToList();
         var facets = new[]
         {
             ListEngine.Facet(pool, query.Filters, Get, "status", ApplicationStatus.All),

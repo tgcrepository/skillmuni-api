@@ -120,6 +120,9 @@ internal sealed class BoardQueries(GamificationDbContext db) : IBoardQueries
         return (mine.ToRow(), ahead + 1);
     }
 
+    public Task<int> CountAsync(DateTime? since, IReadOnlyCollection<Guid>? only, CancellationToken cancellationToken) =>
+        Grouped(since, null, only).CountAsync(cancellationToken);
+
     private IQueryable<Aggregate> Grouped(DateTime? since, DateTime? before, IReadOnlyCollection<Guid>? only)
     {
         var entries = db.XpEntries.AsNoTracking();
