@@ -74,6 +74,36 @@ public sealed class ProgrammeAndFeedbackTests : IAsyncLifetime
         Assert.Single(_h.Store.EventsOf<ProgrammeEnrolled>());
     }
 
+    [Fact]
+    public async Task A_second_programme_enrols_but_pays_nothing()
+    {
+        _h.Settings.SampleProgrammes.Add(new Application.SampleProgramme
+        {
+            Code = "SKM-JHB-26-0102", Name = "Contact Centre Learnership", Partner = "NQF 4", Centre = "Randburg", BatchStarts = new DateOnly(2026, 10, 12),
+            Duration = "12 months", Stipend = "R6,500 / month", MarksFrom = "12", MinEnglish = 50, MinMaths = 40, Eligibility = "Matric",
+        });
+        var who = LearnerHarness.NewLearner();
+
+        Assert.Equal(100, (await _h.Programmes.SubmitAsync(who, Submission(), _ct)).Value.XpEarned);
+        var second = await _h.Programmes.SubmitAsync(who, Submission() with { Code = "skm-jhb-26-0102" }, _ct);
+
+        Assert.Equal(0, second.Value.XpEarned);
+        Assert.Equal(2, _h.Store.Enrolments.Count);
+        Assert.Equal(2, _h.Store.EventsOf<ProgrammeEnrolled>().Count());
+    }
+
+    [Fact]
+    public async Task A_sample_code_is_stored_for_the_tenant_on_first_use()
+    {
+        _h.Settings.SampleProgrammes.Add(new Application.SampleProgramme { Code = "SKM-JHB-26-0102", Name = "Contact Centre Learnership", MarksFrom = "12", BatchStarts = new DateOnly(2026, 10, 12) });
+
+        var found = await _h.Programmes.CheckAsync(LearnerHarness.NewLearner(), "SKM-JHB-26-0102", _ct);
+        await _h.Programmes.CheckAsync(LearnerHarness.NewLearner(), "skm-jhb-26-0102", _ct);
+
+        Assert.Equal(("Contact Centre Learnership", "2026-10-12"), (found.Value.Name, found.Value.BatchStarts));
+        Assert.Single(_h.Store.Programmes, p => p.Code == "SKM-JHB-26-0102");
+    }
+
     [Theory]
     [InlineData("49", "60", "12")]
     [InlineData("60", "49", "12")]

@@ -58,6 +58,9 @@ public interface IEnrolmentRepository
 {
     Task<bool> ExistsAsync(Guid learnerId, string programmeCode, CancellationToken cancellationToken);
 
+    /// <summary>Whether the learner has joined any programme (BR-113 pays once per learner).</summary>
+    Task<bool> AnyAsync(Guid learnerId, CancellationToken cancellationToken);
+
     void Add(Enrolment enrolment);
 }
 

@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using Learner.Application.Abstractions;
 using Learner.Application.Contracts;
@@ -84,6 +85,16 @@ public sealed partial class QuestService(
         if (slug == WhoDis && AnswersJson.ReadString(request.Values, "firstName") is { Length: > 0 } first)
         {
             learner.Rename(first, AnswersJson.ReadString(request.Values, "lastName") ?? learner.LastName, now);
+        }
+
+        // Quest 1's birthday ("DD / MM / YYYY", birthday.ts) and gender (q1-tea.ts) pre-fill the Profile once.
+        if (slug == WhoDis)
+        {
+            var gender = AnswersJson.ReadString(request.Values, "gender") is { Length: > 0 } key and not "self-describe" ? ProfileFormat.ParseGender(key) : (Gender?)null;
+            var birthday = DateOnly.TryParseExact(AnswersJson.ReadString(request.Values, "birthday") ?? string.Empty, "dd / MM / yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date) && date <= DateOnly.FromDateTime(now)
+                ? date
+                : (DateOnly?)null;
+            learner.SeedFromQuest(gender, birthday, now);
         }
 
         // BR-100: +20 the first time a step of the quest in progress is done. BR-101: an all-optional step pays only

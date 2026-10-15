@@ -386,7 +386,7 @@ module.exports = async (ctx, j) => {
   expect(JSON.stringify(leftB) === JSON.stringify(['hit-me-up:backup', 'big-brain-stuff:timeline', 'your-flex-era:trophies']),
     'skipped steps are what is left (keys as the quest screens)', JSON.stringify(leftB));
   expect(jpB.body?.strength?.percent === 83, 'skipper completeness 15/18 = 83%', JSON.stringify(jpB.body?.strength?.percent));
-  expect(jpB.body?.contact?.invitesBy === '' || jpB.body?.contact?.invitesBy === 'None', 'invites off → no invite channels', JSON.stringify(jpB.body?.contact?.invitesBy));
+  expect(jpB.body?.contact?.invitesBy === 'Invites off', 'invites off → no invite channels', JSON.stringify(jpB.body?.contact?.invitesBy));
   const lfB = Object.fromEntries((jpB.body?.lookingFor ?? []).map(x => [x.label, x.value]));
   expect(lfB['Can join'] === '15 days' && lfB['Where'] === 'Bengaluru + 25 km · open to relocating', 'skipper looking-for labels', JSON.stringify(jpB.body?.lookingFor));
   expect(jpB.body?.education?.[0]?.title === '12th' && jpB.body?.education?.[0]?.school === 'CBSE', 'school-level education', JSON.stringify(jpB.body?.education));

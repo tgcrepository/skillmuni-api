@@ -58,7 +58,8 @@ public sealed class JobProfileService(
     public async Task<CvContactDto> GetCvContactAsync(LearnerRef who, CancellationToken cancellationToken)
     {
         var learner = await accessor.GetOrCreateAsync(who, cancellationToken);
-        return JobProfileBuilder.Contact(learner, await answers.ListAsync(who.Id, cancellationToken));
+        var settings = await jobProfiles.FindAsync(learner.Id, cancellationToken);
+        return JobProfileBuilder.Contact(learner, await answers.ListAsync(who.Id, cancellationToken), settings);
     }
 
     public async Task<JobProfileDto> SaveAboutAsync(LearnerRef who, SaveAboutRequest request, CancellationToken cancellationToken)

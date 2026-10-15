@@ -79,6 +79,9 @@ internal sealed class EnrolmentRepository(LearnerDbContext db) : IEnrolmentRepos
     public Task<bool> ExistsAsync(Guid learnerId, string programmeCode, CancellationToken cancellationToken) =>
         db.Enrolments.AsNoTracking().AnyAsync(e => e.LearnerId == learnerId && e.ProgrammeCode == programmeCode, cancellationToken);
 
+    public Task<bool> AnyAsync(Guid learnerId, CancellationToken cancellationToken) =>
+        db.Enrolments.AsNoTracking().AnyAsync(e => e.LearnerId == learnerId, cancellationToken);
+
     public void Add(Enrolment enrolment) => db.Enrolments.Add(enrolment);
 }
 
