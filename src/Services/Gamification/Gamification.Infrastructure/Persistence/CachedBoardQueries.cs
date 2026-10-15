@@ -37,4 +37,7 @@ internal sealed class CachedBoardQueries(BoardQueries inner, IDistributedCache c
 
     public Task<(BoardRow Row, int Rank)?> RankOfAsync(Guid learnerId, DateTime? since, IReadOnlyCollection<Guid>? only, CancellationToken cancellationToken) =>
         inner.RankOfAsync(learnerId, since, only, cancellationToken);
+
+    public Task<int> CountAsync(DateTime? since, IReadOnlyCollection<Guid>? only, CancellationToken cancellationToken) =>
+        inner.CountAsync(since, only, cancellationToken);
 }

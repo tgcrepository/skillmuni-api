@@ -44,6 +44,7 @@ internal sealed class PlayerConfiguration : IEntityTypeConfiguration<Player>
         b.Property(e => e.CountersJson).HasColumnName("counters").HasColumnType("json").IsRequired();
         b.Property(e => e.JoinedAt).HasColumnName("joined_at");
         b.Property(e => e.UpdatedAt).HasColumnName("updated_at");
+        b.Property(e => e.Version).HasColumnName("version").IsConcurrencyToken();
 
         b.HasIndex(e => new { e.TenantId, e.Batch }).HasDatabaseName("ix_players_batch");
     }

@@ -153,6 +153,31 @@ public sealed class GamificationEndpointsTests(GamificationApiFactory api)
     }
 
     [Fact]
+    public async Task Two_writers_of_one_player_cannot_lose_an_update()
+    {
+        // Events for one learner are handled in parallel; the second writer must fail (and its event be redelivered)
+        // instead of overwriting the first one's totals.
+        var me = await api.JoinAsync("Yash", "Pohare");
+        await using var first = api.Services.CreateAsyncScope();
+        await using var second = api.Services.CreateAsyncScope();
+        first.ServiceProvider.GetRequiredService<TenantOverride>().Set(TestTokens.Tenant);
+        second.ServiceProvider.GetRequiredService<TenantOverride>().Set(TestTokens.Tenant);
+        var db1 = first.ServiceProvider.GetRequiredService<GamificationDbContext>();
+        var db2 = second.ServiceProvider.GetRequiredService<GamificationDbContext>();
+        var p1 = await db1.Players.SingleAsync(p => p.Id == me);
+        var p2 = await db2.Players.SingleAsync(p => p.Id == me);
+
+        p1.AddXp(10, DateTime.UtcNow);
+        await db1.SaveChangesAsync();
+        p2.AddXp(5, DateTime.UtcNow);
+        await Assert.ThrowsAsync<DbUpdateConcurrencyException>(() => db2.SaveChangesAsync());
+
+        await using var check = api.Services.CreateAsyncScope();
+        check.ServiceProvider.GetRequiredService<TenantOverride>().Set(TestTokens.Tenant);
+        Assert.Equal(10, (await check.ServiceProvider.GetRequiredService<GamificationDbContext>().Players.AsNoTracking().SingleAsync(p => p.Id == me)).TotalXp);
+    }
+
+    [Fact]
     public async Task No_session_is_401() =>
         Assert.Equal("no-session", await (await api.CreateClient().GetAsync("/api/v1/arena")).ProblemCodeAsync(HttpStatusCode.Unauthorized));
 }
