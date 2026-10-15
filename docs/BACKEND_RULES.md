@@ -3,11 +3,11 @@
 Copy this file into the backend repo as `CLAUDE.md`. It applies to every service. When a rule here and the BRD disagree, ask; don't guess.
 
 ## 1. Stack
-- **Framework:** ASP.NET Core 8 (LTS) and C# 12. Nullable reference types are on, and warnings are errors.
+- **Framework:** ASP.NET Core 10 (LTS) and C# 14. Nullable reference types are on, and warnings are errors.
 - **Architecture:** microservices, each built with Clean Architecture and SOLID. A service never references another service's code, only shared BuildingBlocks.
 - **Hosting:** each service is one Docker image on **Azure Container Apps**, behind a **YARP gateway** (also on Container Apps).
 - **Data:** **MySQL** on Azure Database for MySQL Flexible Server, with one server and **one schema per service**. A service reads and writes only its own schema.
-- **Data access:** EF Core 8 with the Pomelo MySQL provider. Migrations live per service.
+- **Data access:** EF Core 10 with Oracle's `MySql.EntityFrameworkCore` 10.x provider (Pomelo has no EF Core 10 release; decision B-02). Migrations live per service.
 - **Events:** **Azure Service Bus** topics carry cross-service events, written through an outbox table in the publishing service's schema.
 - **Files:** Azure Blob Storage. **Secrets:** Azure Key Vault. **Access to Azure resources:** Managed Identity.
 - **Observability:** OpenTelemetry, exported to Azure Monitor / Application Insights.
@@ -35,6 +35,7 @@ docker-compose.yml             local run: all services + gateway + MySQL + Servi
 - Repositories return domain entities or projections, never `IQueryable` outside Infrastructure.
 
 ## 3. Coding standards
+- Every service uses the same layers: Controllers → Services → Repositories, with DTOs and Interfaces. Follow SOLID and universal coding standards.
 - Use C# naming (PascalCase types and members, camelCase locals, `I` prefix on interfaces, `Async` suffix on async methods).
 - Use constructor DI only, with one interface per external dependency. No service locator and no `static` state.
 - Use async all the way. Pass a `CancellationToken` through every async call. Never use `.Result` or `.Wait()`.
@@ -69,14 +70,14 @@ docker-compose.yml             local run: all services + gateway + MySQL + Servi
 - Privacy: never store a full Indian ID number (only the masked number and last 4, A-272). PII columns are listed in the service README.
 
 ## 6. Security
-- No secrets in code, config files or images. Use Key Vault references and Managed Identity for MySQL, Service Bus and Blob.
+- No secrets in code, config files or images. Use Key Vault references and Managed Identity for Service Bus, Blob and Key Vault. MySQL is the one exception: services sign in with a password kept in Key Vault, because Oracle's provider has no token callback (B-11).
 - **Auth:**
   - The Identity service issues a short-lived JWT in an HttpOnly, Secure, SameSite=Lax cookie, plus a refresh token.
   - The gateway validates the token and forwards claims. Each service validates again (defence in depth).
   - Authorization uses policies, with roles: learner, institute-admin, tenant-admin.
 - **Tenancy:** every row carries `tenantId`, and every query filters by it (an EF global query filter).
 - **Least privilege:** one MySQL user per service, with grants only on its own schema. Managed Identity roles are scoped to one resource each.
-- **Rate limits:** set per IP and per account at the gateway. Login codes: 5 tries, then 429; resend after 30 s.
+- **Rate limits:** set per IP and per account at the gateway. Login codes: unlimited visible tries with no count shown; a hidden anti-abuse limit (mock: 20) returns 429 (BR-11, A-312). Resend after 30 s.
 - **Logs:** no PII or secrets. Mask mobile and email. Never log codes or tokens.
 
 ## 7. Errors and logging
