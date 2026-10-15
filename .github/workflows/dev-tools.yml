@@ -1,0 +1,64 @@
+name: dev-tools
+
+# Run by hand (or the REST API) against a branch: adds an EF Core migration and/or applies `dotnet format`,
+# then commits the result back to that branch. Lets work continue from machines without the .NET SDK.
+on:
+  workflow_dispatch:
+    inputs:
+      service:
+        description: "Service for the migration (e.g. Assessment). Empty = no migration."
+        required: false
+        default: ""
+      migration:
+        description: "Migration name (e.g. InitialCreate)"
+        required: false
+        default: ""
+      format:
+        description: "Run dotnet format"
+        required: false
+        default: "true"
+
+permissions:
+  contents: write
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  tools:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Restore and build
+        run: dotnet build SkillMuni.sln -c Debug
+
+      - name: Add migration
+        if: ${{ inputs.service != '' && inputs.migration != '' }}
+        run: |
+          dotnet tool install --global dotnet-ef --version 10.0.12
+          svc="${{ inputs.service }}"
+          dotnet ef migrations add "${{ inputs.migration }}" \
+            --project src/Services/$svc/$svc.Infrastructure \
+            --startup-project src/Services/$svc/$svc.Api \
+            --output-dir Persistence/Migrations --no-build
+
+      - name: Format
+        if: ${{ inputs.format == 'true' }}
+        run: dotnet format SkillMuni.sln --no-restore
+
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then echo "Nothing to commit"; exit 0; fi
+          git commit -m "dev-tools: ${{ inputs.service != '' && format('migration {0} {1}; ', inputs.service, inputs.migration) || '' }}format"
+          git push

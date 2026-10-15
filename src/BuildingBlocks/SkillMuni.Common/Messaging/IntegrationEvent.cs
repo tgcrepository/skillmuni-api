@@ -12,6 +12,9 @@ public abstract record IntegrationEvent
 
     public required string TenantId { get; init; }
 
+    /// <summary>When the fact happened (UTC). Set by the outbox when the publisher leaves it empty.</summary>
+    public DateTime OccurredAt { get; init; }
+
     /// <summary>Sent as the Service Bus message subject, not in the body.</summary>
     [JsonIgnore]
     public abstract string EventType { get; }
