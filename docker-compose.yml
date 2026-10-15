@@ -27,15 +27,23 @@ services:
       interval: 5s
       retries: 30
 
+  # SQL Server for the Service Bus emulator's own state (Azure SQL Edge is retired).
   sqledge:
-    image: mcr.microsoft.com/azure-sql-edge:latest
+    image: mcr.microsoft.com/mssql/server:2022-latest
     environment:
       ACCEPT_EULA: "Y"
       MSSQL_SA_PASSWORD: ${SQL_EDGE_PASSWORD:?run scripts/dev-setup.sh}
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -Q 'SELECT 1' || exit 1"]
+      interval: 5s
+      retries: 40
 
   servicebus:
     image: mcr.microsoft.com/azure-messaging/servicebus-emulator:latest
-    depends_on: [sqledge]
+    depends_on:
+      sqledge:
+        condition: service_healthy
+    restart: on-failure
     environment:
       ACCEPT_EULA: "Y"
       SQL_SERVER: sqledge
