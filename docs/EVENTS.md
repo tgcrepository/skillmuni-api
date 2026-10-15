@@ -17,7 +17,7 @@ repeat across courses, so `(courseSlug, moduleSlug)` is the unique key. `briefId
 | `identity.learner.registered` | Identity | accountId, firstName, lastName, market | Learner (create profile), Gamification (player), Assessment, Careers (learner row, lazy otherwise); Learning creates its rows lazily; Muni (name and joining date for replies) |
 | `identity.contact.verified` | Identity | accountId, kind, value | Learner |
 | `identity.claim.consented` | Identity | claimId, accountId, shareProgress, verifyCertificate, applyForMe | Learner |
-| `identity.claim.confirmed` | Identity | claimId, accountId | Learner → marks quests 1–5 done and publishes their step and quest events (BR-119). Gamification pays nothing for the claim itself |
+| `identity.claim.confirmed` | Identity | claimId, accountId | Learner → marks quests 1–5 done and publishes their step and quest events (BR-119). Gamification pays nothing for the claim itself; Careers → My Matches show before the profile is published (BR-72) |
 | `identity.claim.declined` | Identity | claimId | — |
 | `identity.consent.changed` | Identity | accountId, scope, policyVersion, granted | — |
 | `identity.data-export.requested` | Identity | accountId | every service with learner data (export, when built) |
@@ -44,7 +44,7 @@ repeat across courses, so `(courseSlug, moduleSlug)` is the unique key. `briefId
 | `careers.application.withdrawn` | Careers | learnerId, applicationId | — (XP never decreases, BR-115) |
 | `careers.fest.booked` | Careers | learnerId, bookingId, festId | Gamification → +100 on the first (BR-112), key `mission:first-fest-booking` |
 | `careers.fest.cancelled` | Careers | learnerId, bookingId | — |
-| `gamification.xp.awarded` | Gamification | learnerId, totalXp, level, rank, levelStartXp, nextLevelXp, badges, streakDays | Learner (profile header), Careers (Launchpad), Muni (XP, level, rank, streak in replies) |
+| `gamification.xp.awarded` | Gamification | learnerId, totalXp, level, rank, levelStartXp, nextLevelXp, badges, streakDays | Learner (profile header), Muni (XP, level, rank, streak in replies) |
 | `gamification.badge.earned` | Gamification | learnerId, badgeId, badgeName | Platform → bell notification, once per badge |
 
 Queues (not topics): `notifications` (Identity → Platform): one message per SMS / email / push to send. Body

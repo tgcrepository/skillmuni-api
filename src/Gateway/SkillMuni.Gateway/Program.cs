@@ -81,6 +81,7 @@ if (app.Environment.IsDevelopment())
         o.SwaggerEndpoint("/openapi/learning/v1.json", "Learning v1");
         o.SwaggerEndpoint("/openapi/muni/v1.json", "Muni v1");
         o.SwaggerEndpoint("/openapi/platform/v1.json", "Platform v1");
+        o.SwaggerEndpoint("/openapi/careers/v1.json", "Careers v1");
     });
 }
 

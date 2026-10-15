@@ -502,6 +502,56 @@
                     }
                   }
                 ]
+              },
+              {
+                "Name": "careers",
+                "Properties": {
+                  "DeadLetteringOnMessageExpiration": false,
+                  "DefaultMessageTimeToLive": "PT24H",
+                  "LockDuration": "PT1M",
+                  "MaxDeliveryCount": 5,
+                  "ForwardDeadLetteredMessagesTo": "",
+                  "ForwardTo": "",
+                  "RequiresSession": false
+                },
+                "Rules": [
+                  {
+                    "Name": "assessment-attempt-submitted",
+                    "Properties": {
+                      "FilterType": "Correlation",
+                      "CorrelationFilter": {
+                        "Label": "assessment.attempt.submitted"
+                      }
+                    }
+                  },
+                  {
+                    "Name": "learner-job-profile-completed",
+                    "Properties": {
+                      "FilterType": "Correlation",
+                      "CorrelationFilter": {
+                        "Label": "learner.job-profile.completed"
+                      }
+                    }
+                  },
+                  {
+                    "Name": "identity-claim-confirmed",
+                    "Properties": {
+                      "FilterType": "Correlation",
+                      "CorrelationFilter": {
+                        "Label": "identity.claim.confirmed"
+                      }
+                    }
+                  },
+                  {
+                    "Name": "identity-learner-erased",
+                    "Properties": {
+                      "FilterType": "Correlation",
+                      "CorrelationFilter": {
+                        "Label": "identity.learner.erased"
+                      }
+                    }
+                  }
+                ]
               }
             ]
           }
