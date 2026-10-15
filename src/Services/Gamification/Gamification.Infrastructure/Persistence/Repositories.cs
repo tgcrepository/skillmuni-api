@@ -28,6 +28,14 @@ internal sealed class XpLedger(GamificationDbContext db) : IXpLedger
     public Task<bool> ExistsAsync(Guid learnerId, string reason, string sourceId, CancellationToken cancellationToken) =>
         db.XpEntries.AsNoTracking().AnyAsync(e => e.LearnerId == learnerId && e.Reason == reason && e.SourceId == sourceId, cancellationToken);
 
+    public Task<DateTime?> LastCreditAsync(Guid learnerId, string reason, CancellationToken cancellationToken) =>
+        db.XpEntries.AsNoTracking()
+            .Where(e => e.LearnerId == learnerId && e.Reason == reason)
+            .MaxAsync(e => (DateTime?)e.OccurredAt, cancellationToken);
+
+    public Task<int> TotalAsync(Guid learnerId, CancellationToken cancellationToken) =>
+        db.XpEntries.AsNoTracking().Where(e => e.LearnerId == learnerId).SumAsync(e => e.Xp, cancellationToken);
+
     public async Task<PagedResult<XpEntry>> ListAsync(Guid learnerId, PageRequest page, CancellationToken cancellationToken)
     {
         var query = db.XpEntries.AsNoTracking().Where(e => e.LearnerId == learnerId);

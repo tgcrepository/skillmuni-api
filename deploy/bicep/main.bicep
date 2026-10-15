@@ -56,23 +56,27 @@ var learnerEvents = [
 ]
 var learnerEventsQuoted = [for e in learnerEvents: '\'${e}\'']
 
-// Events the Gamification service turns into XP, badges and streaks.
+// Events the Gamification service turns into XP, badges and streaks (BRD §4; docs/EVENTS.md).
 var gamificationEvents = [
   'identity.learner.registered'
-  'identity.claim.confirmed'
   'identity.learner.erased'
   'learner.quest.step-completed'
   'learner.quest.completed'
   'learner.profile.task-completed'
+  'learner.job-profile.completed'
   'learner.programme.enrolled'
   'learner.feedback.sent'
   'learner.photo.changed'
+  'assessment.island.cleared'
   'assessment.attempt.submitted'
   'learning.activity.recorded'
   'learning.brief.completed'
   'learning.quiz.submitted'
   'learning.module.completed'
   'learning.course.completed'
+  'learning.first-moves.claimed'
+  'careers.application.sent'
+  'careers.fest.booked'
 ]
 var gamificationEventsQuoted = [for e in gamificationEvents: '\'${e}\'']
 

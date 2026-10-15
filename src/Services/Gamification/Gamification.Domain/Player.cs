@@ -121,12 +121,13 @@ public sealed class Player : Entity
     }
 
     /// <summary>
-    /// Marks <paramref name="today"/> active. Consecutive days grow the streak; a gap restarts it at 1.
+    /// Marks <paramref name="today"/> as a streak day. Consecutive days grow the streak; a gap restarts it at 1.
+    /// A day before the last streak day (a late event) changes nothing.
     /// </summary>
-    /// <returns>True the first time the learner is active today.</returns>
+    /// <returns>True the first time <paramref name="today"/> counts.</returns>
     public bool MarkActive(DateOnly today, DateTime now)
     {
-        if (LastActiveDay == today)
+        if (LastActiveDay is { } last && today <= last)
         {
             return false;
         }
