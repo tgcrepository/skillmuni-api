@@ -75,6 +75,24 @@ public static class ApiProblems
         return http.Response.WriteAsJsonAsync(problem, Json, ContentType, cancellationToken);
     }
 
+    /// <summary>
+    /// The body for an error status nothing else wrote (unknown route, wrong verb, unsupported media type), so every
+    /// error the app sees is problem+json with <c>message</c> and <c>errors.code</c>. Used with <c>UseStatusCodePages</c>.
+    /// </summary>
+    public static Task WriteStatusAsync(HttpContext http, CancellationToken cancellationToken = default)
+    {
+        var status = http.Response.StatusCode;
+        var (code, message) = status switch
+        {
+            StatusCodes.Status404NotFound => ("not-found", "Not found."),
+            StatusCodes.Status405MethodNotAllowed => ("method-not-allowed", "This method isn't allowed here."),
+            StatusCodes.Status415UnsupportedMediaType => ("unsupported-media-type", "Send the request as JSON."),
+            >= StatusCodes.Status500InternalServerError => ("server-error", "Something went wrong"),
+            _ => ("error", "The request could not be completed."),
+        };
+        return WriteAsync(http, Create(http, status, code, message), cancellationToken);
+    }
+
     /// <summary>5xx: only "Something went wrong" and the correlation id (CLAUDE.md §7).</summary>
     public static Task WriteServerErrorAsync(HttpContext http, CancellationToken cancellationToken = default) =>
         WriteAsync(

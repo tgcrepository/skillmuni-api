@@ -55,6 +55,8 @@ jobs:
         id: journeys
         run: |
           set -o pipefail
+          # The dev signing key from .env lets journeys mint an institute-admin token (claims) like Identity does.
+          export AUTH_PRIVATE_KEY_B64="$(grep '^AUTH_PRIVATE_KEY_B64=' .env | cut -d= -f2-)"
           node tools/contract/run-contract.js http://localhost:5080 2>journeys.err | tee journeys.txt
 
       - name: Collect logs
