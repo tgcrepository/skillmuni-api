@@ -8,8 +8,12 @@ namespace SkillMuni.Messaging.Outbox;
 public sealed class EfOutbox<TContext>(TContext db, TimeProvider clock, ICorrelationContext correlation) : IOutbox
     where TContext : DbContext
 {
-    public void Add(IntegrationEvent integrationEvent) =>
-        db.Set<OutboxMessage>().Add(OutboxMessage.Create(integrationEvent, clock.GetUtcNow().UtcDateTime, correlation.CorrelationId));
+    public void Add(IntegrationEvent integrationEvent)
+    {
+        var now = clock.GetUtcNow().UtcDateTime;
+        var stamped = integrationEvent.OccurredAt == default ? integrationEvent with { OccurredAt = now } : integrationEvent;
+        db.Set<OutboxMessage>().Add(OutboxMessage.Create(stamped, now, correlation.CorrelationId));
+    }
 }
 
 public sealed class OutboxOptions
