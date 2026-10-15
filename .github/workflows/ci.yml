@@ -68,8 +68,8 @@ jobs:
           {
             echo "### CI failure summary (${GITHUB_SHA::7})"
             echo '```'
-            grep -E ": error |error [A-Z]+[0-9]+|warning [A-Z]+[0-9]+|Failed |\[FAIL\]|Error Message|^\s+at |Assert\.|has-pending|Unhandled|Exception:" ci.log \
-              | sed -E "s|$GITHUB_WORKSPACE/||g; s/ \[[^]]*\.csproj[^]]*\]$//" | awk '!seen[$0]++' | head -400
+            grep -E -A4 ": error |error [A-Z]+[0-9]+|warning [A-Z]+[0-9]+|Failed |Error Message|Assert\.|has-pending|Unhandled|Exception:" ci.log | grep -v -E "^\s+at (System|Microsoft|Xunit|MySql)\." \
+              | sed -E "s|$GITHUB_WORKSPACE/||g; s/ \[[^]]*\.csproj[^]]*\]$//" | awk '!seen[$0]++' | head -600
             echo '```'
           } > summary.md
           head -c 60000 summary.md > body.md
