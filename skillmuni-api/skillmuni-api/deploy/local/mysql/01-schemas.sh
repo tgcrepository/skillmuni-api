@@ -1,0 +1,18 @@
+#!/bin/bash
+# One schema and one user per service (CLAUDE.md §6). Runs once, when the MySQL volume is first created.
+set -euo pipefail
+mysql -uroot -p"${MYSQL_ROOT_PASSWORD}" <<SQL
+CREATE DATABASE IF NOT EXISTS identity CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
+CREATE USER IF NOT EXISTS 'identity_svc'@'%' IDENTIFIED BY '${IDENTITY_DB_PASSWORD}';
+GRANT ALL PRIVILEGES ON identity.* TO 'identity_svc'@'%';
+CREATE DATABASE IF NOT EXISTS learner CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
+CREATE USER IF NOT EXISTS 'learner_svc'@'%' IDENTIFIED BY '${LEARNER_DB_PASSWORD}';
+GRANT ALL PRIVILEGES ON learner.* TO 'learner_svc'@'%';
+CREATE DATABASE IF NOT EXISTS cv CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
+CREATE USER IF NOT EXISTS 'cv_svc'@'%' IDENTIFIED BY '${CV_DB_PASSWORD}';
+GRANT ALL PRIVILEGES ON cv.* TO 'cv_svc'@'%';
+CREATE DATABASE IF NOT EXISTS gamification CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
+CREATE USER IF NOT EXISTS 'gamification_svc'@'%' IDENTIFIED BY '${GAMIFICATION_DB_PASSWORD}';
+GRANT ALL PRIVILEGES ON gamification.* TO 'gamification_svc'@'%';
+FLUSH PRIVILEGES;
+SQL

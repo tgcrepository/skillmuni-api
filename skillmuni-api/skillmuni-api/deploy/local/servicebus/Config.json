@@ -1,0 +1,301 @@
+{
+  "UserConfig": {
+    "Namespaces": [
+      {
+        "Name": "sbemulatorns",
+        "Queues": [
+          {
+            "Name": "notifications",
+            "Properties": {
+              "DeadLetteringOnMessageExpiration": false,
+              "DefaultMessageTimeToLive": "PT1H",
+              "DuplicateDetectionHistoryTimeWindow": "PT20S",
+              "ForwardDeadLetteredMessagesTo": "",
+              "ForwardTo": "",
+              "LockDuration": "PT1M",
+              "MaxDeliveryCount": 5,
+              "RequiresDuplicateDetection": false,
+              "RequiresSession": false
+            }
+          }
+        ],
+        "Topics": [
+          {
+            "Name": "skillmuni-events",
+            "Properties": {
+              "DefaultMessageTimeToLive": "PT24H",
+              "DuplicateDetectionHistoryTimeWindow": "PT20S",
+              "RequiresDuplicateDetection": false
+            },
+            "Subscriptions": [
+              {
+                "Name": "audit",
+                "Properties": {
+                  "DeadLetteringOnMessageExpiration": false,
+                  "DefaultMessageTimeToLive": "PT24H",
+                  "LockDuration": "PT1M",
+                  "MaxDeliveryCount": 5,
+                  "ForwardDeadLetteredMessagesTo": "",
+                  "ForwardTo": "",
+                  "RequiresSession": false
+                }
+              },
+              {
+                "Name": "learner",
+                "Properties": {
+                  "DeadLetteringOnMessageExpiration": false,
+                  "DefaultMessageTimeToLive": "PT24H",
+                  "LockDuration": "PT1M",
+                  "MaxDeliveryCount": 5,
+                  "ForwardDeadLetteredMessagesTo": "",
+                  "ForwardTo": "",
+                  "RequiresSession": false
+                },
+                "Rules": [
+                  {
+                    "Name": "identity-learner-registered",
+                    "Properties": {
+                      "FilterType": "Correlation",
+                      "CorrelationFilter": {
+                        "Label": "identity.learner.registered"
+                      }
+                    }
+                  },
+                  {
+                    "Name": "identity-contact-verified",
+                    "Properties": {
+                      "FilterType": "Correlation",
+                      "CorrelationFilter": {
+                        "Label": "identity.contact.verified"
+                      }
+                    }
+                  },
+                  {
+                    "Name": "identity-claim-confirmed",
+                    "Properties": {
+                      "FilterType": "Correlation",
+                      "CorrelationFilter": {
+                        "Label": "identity.claim.confirmed"
+                      }
+                    }
+                  },
+                  {
+                    "Name": "identity-learner-erased",
+                    "Properties": {
+                      "FilterType": "Correlation",
+                      "CorrelationFilter": {
+                        "Label": "identity.learner.erased"
+                      }
+                    }
+                  },
+                  {
+                    "Name": "gamification-xp-awarded",
+                    "Properties": {
+                      "FilterType": "Correlation",
+                      "CorrelationFilter": {
+                        "Label": "gamification.xp.awarded"
+                      }
+                    }
+                  },
+                  {
+                    "Name": "assessment-attempt-submitted",
+                    "Properties": {
+                      "FilterType": "Correlation",
+                      "CorrelationFilter": {
+                        "Label": "assessment.attempt.submitted"
+                      }
+                    }
+                  },
+                  {
+                    "Name": "cv-parse-completed",
+                    "Properties": {
+                      "FilterType": "Correlation",
+                      "CorrelationFilter": {
+                        "Label": "cv.parse.completed"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "Name": "cv",
+                "Properties": {
+                  "DeadLetteringOnMessageExpiration": false,
+                  "DefaultMessageTimeToLive": "PT24H",
+                  "LockDuration": "PT1M",
+                  "MaxDeliveryCount": 5,
+                  "ForwardDeadLetteredMessagesTo": "",
+                  "ForwardTo": "",
+                  "RequiresSession": false
+                },
+                "Rules": [
+                  {
+                    "Name": "identity-learner-erased",
+                    "Properties": {
+                      "FilterType": "Correlation",
+                      "CorrelationFilter": {
+                        "Label": "identity.learner.erased"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "Name": "gamification",
+                "Properties": {
+                  "DeadLetteringOnMessageExpiration": false,
+                  "DefaultMessageTimeToLive": "PT24H",
+                  "LockDuration": "PT1M",
+                  "MaxDeliveryCount": 5,
+                  "ForwardDeadLetteredMessagesTo": "",
+                  "ForwardTo": "",
+                  "RequiresSession": false
+                },
+                "Rules": [
+                  {
+                    "Name": "identity-learner-registered",
+                    "Properties": {
+                      "FilterType": "Correlation",
+                      "CorrelationFilter": {
+                        "Label": "identity.learner.registered"
+                      }
+                    }
+                  },
+                  {
+                    "Name": "identity-claim-confirmed",
+                    "Properties": {
+                      "FilterType": "Correlation",
+                      "CorrelationFilter": {
+                        "Label": "identity.claim.confirmed"
+                      }
+                    }
+                  },
+                  {
+                    "Name": "identity-learner-erased",
+                    "Properties": {
+                      "FilterType": "Correlation",
+                      "CorrelationFilter": {
+                        "Label": "identity.learner.erased"
+                      }
+                    }
+                  },
+                  {
+                    "Name": "learner-quest-step-completed",
+                    "Properties": {
+                      "FilterType": "Correlation",
+                      "CorrelationFilter": {
+                        "Label": "learner.quest.step-completed"
+                      }
+                    }
+                  },
+                  {
+                    "Name": "learner-quest-completed",
+                    "Properties": {
+                      "FilterType": "Correlation",
+                      "CorrelationFilter": {
+                        "Label": "learner.quest.completed"
+                      }
+                    }
+                  },
+                  {
+                    "Name": "learner-profile-task-completed",
+                    "Properties": {
+                      "FilterType": "Correlation",
+                      "CorrelationFilter": {
+                        "Label": "learner.profile.task-completed"
+                      }
+                    }
+                  },
+                  {
+                    "Name": "learner-programme-enrolled",
+                    "Properties": {
+                      "FilterType": "Correlation",
+                      "CorrelationFilter": {
+                        "Label": "learner.programme.enrolled"
+                      }
+                    }
+                  },
+                  {
+                    "Name": "learner-feedback-sent",
+                    "Properties": {
+                      "FilterType": "Correlation",
+                      "CorrelationFilter": {
+                        "Label": "learner.feedback.sent"
+                      }
+                    }
+                  },
+                  {
+                    "Name": "learner-photo-changed",
+                    "Properties": {
+                      "FilterType": "Correlation",
+                      "CorrelationFilter": {
+                        "Label": "learner.photo.changed"
+                      }
+                    }
+                  },
+                  {
+                    "Name": "assessment-attempt-submitted",
+                    "Properties": {
+                      "FilterType": "Correlation",
+                      "CorrelationFilter": {
+                        "Label": "assessment.attempt.submitted"
+                      }
+                    }
+                  },
+                  {
+                    "Name": "learning-activity-recorded",
+                    "Properties": {
+                      "FilterType": "Correlation",
+                      "CorrelationFilter": {
+                        "Label": "learning.activity.recorded"
+                      }
+                    }
+                  },
+                  {
+                    "Name": "learning-brief-completed",
+                    "Properties": {
+                      "FilterType": "Correlation",
+                      "CorrelationFilter": {
+                        "Label": "learning.brief.completed"
+                      }
+                    }
+                  },
+                  {
+                    "Name": "learning-quiz-submitted",
+                    "Properties": {
+                      "FilterType": "Correlation",
+                      "CorrelationFilter": {
+                        "Label": "learning.quiz.submitted"
+                      }
+                    }
+                  },
+                  {
+                    "Name": "learning-module-completed",
+                    "Properties": {
+                      "FilterType": "Correlation",
+                      "CorrelationFilter": {
+                        "Label": "learning.module.completed"
+                      }
+                    }
+                  },
+                  {
+                    "Name": "learning-course-completed",
+                    "Properties": {
+                      "FilterType": "Correlation",
+                      "CorrelationFilter": {
+                        "Label": "learning.course.completed"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "Logging": {
+      "Type": "File"
+    }
+  }
+}
