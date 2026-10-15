@@ -1,0 +1,148 @@
+# Local run: gateway + Identity + Learner + CV + Gamification + MySQL + Service Bus emulator + Redis + Azurite.
+#   ./scripts/dev-setup.sh && docker compose up --build
+# Frontend: set environment.apiBaseUrl to /api/v1 and proxy /api to http://localhost:5080.
+name: skillmuni
+
+services:
+  mysql:
+    image: mysql:8.4
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_0900_ai_ci"]
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?run scripts/dev-setup.sh}
+      IDENTITY_DB_PASSWORD: ${IDENTITY_DB_PASSWORD:?run scripts/dev-setup.sh}
+      LEARNER_DB_PASSWORD: ${LEARNER_DB_PASSWORD:?run scripts/dev-setup.sh}
+      CV_DB_PASSWORD: ${CV_DB_PASSWORD:?run scripts/dev-setup.sh}
+      GAMIFICATION_DB_PASSWORD: ${GAMIFICATION_DB_PASSWORD:?run scripts/dev-setup.sh}
+    ports: ["3306:3306"]
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./deploy/local/mysql:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 5s
+      retries: 30
+
+  sqledge:
+    image: mcr.microsoft.com/azure-sql-edge:latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${SQL_EDGE_PASSWORD:?run scripts/dev-setup.sh}
+
+  servicebus:
+    image: mcr.microsoft.com/azure-messaging/servicebus-emulator:latest
+    depends_on: [sqledge]
+    environment:
+      ACCEPT_EULA: "Y"
+      SQL_SERVER: sqledge
+      MSSQL_SA_PASSWORD: ${SQL_EDGE_PASSWORD}
+    volumes:
+      - ./deploy/local/servicebus/Config.json:/ServiceBus_Emulator/ConfigFiles/Config.json:ro
+    ports: ["5672:5672"]
+
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite:latest
+    command: ["azurite-blob", "--blobHost", "0.0.0.0", "--skipApiVersionCheck"]
+    ports: ["10000:10000"]
+
+  identity:
+    build:
+      context: .
+      dockerfile: src/Services/Identity/Identity.Api/Dockerfile
+    depends_on:
+      mysql:
+        condition: service_healthy
+      servicebus:
+        condition: service_started
+      redis:
+        condition: service_started
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__Identity: server=mysql;port=3306;database=identity;user=identity_svc;password=${IDENTITY_DB_PASSWORD}
+      ConnectionStrings__Redis: redis:6379
+      # The emulator's documented local key, not a secret.
+      ServiceBus__ConnectionString: Endpoint=sb://servicebus;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;
+      Auth__SigningPrivateKeyPem: ${AUTH_PRIVATE_KEY_B64}
+      Auth__SigningPublicKeyPem: ${AUTH_PUBLIC_KEY_B64}
+      Identity__Security__HashKey: ${IDENTITY_HASH_KEY}
+
+  learner:
+    build:
+      context: .
+      dockerfile: src/Services/Learner/Learner.Api/Dockerfile
+    depends_on:
+      mysql:
+        condition: service_healthy
+      servicebus:
+        condition: service_started
+      azurite:
+        condition: service_started
+      redis:
+        condition: service_started
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__Learner: server=mysql;port=3306;database=learner;user=learner_svc;password=${LEARNER_DB_PASSWORD}
+      ConnectionStrings__Redis: redis:6379
+      ServiceBus__ConnectionString: Endpoint=sb://servicebus;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;
+      Auth__SigningPublicKeyPem: ${AUTH_PUBLIC_KEY_B64}
+      Learner__Security__EncryptionKey: ${LEARNER_ENCRYPTION_KEY:?run scripts/dev-setup.sh}
+      # Azurite's documented well-known development account, not a secret.
+      Learner__Storage__ConnectionString: DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite:10000/devstoreaccount1;
+
+  cv:
+    build:
+      context: .
+      dockerfile: src/Services/Cv/Cv.Api/Dockerfile
+    depends_on:
+      mysql:
+        condition: service_healthy
+      servicebus:
+        condition: service_started
+      azurite:
+        condition: service_started
+      redis:
+        condition: service_started
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__Cv: server=mysql;port=3306;database=cv;user=cv_svc;password=${CV_DB_PASSWORD}
+      ConnectionStrings__Redis: redis:6379
+      ServiceBus__ConnectionString: Endpoint=sb://servicebus;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;
+      Auth__SigningPublicKeyPem: ${AUTH_PUBLIC_KEY_B64}
+      Cv__IdentityBaseAddress: http://identity:8080/
+      # Azurite's documented well-known development account, not a secret.
+      Cv__Storage__ConnectionString: DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite:10000/devstoreaccount1;
+
+  gamification:
+    build:
+      context: .
+      dockerfile: src/Services/Gamification/Gamification.Api/Dockerfile
+    depends_on:
+      mysql:
+        condition: service_healthy
+      servicebus:
+        condition: service_started
+      redis:
+        condition: service_started
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__Gamification: server=mysql;port=3306;database=gamification;user=gamification_svc;password=${GAMIFICATION_DB_PASSWORD}
+      ConnectionStrings__Redis: redis:6379
+      ServiceBus__ConnectionString: Endpoint=sb://servicebus;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;
+      Auth__SigningPublicKeyPem: ${AUTH_PUBLIC_KEY_B64}
+
+  gateway:
+    build:
+      context: .
+      dockerfile: src/Gateway/SkillMuni.Gateway/Dockerfile
+    depends_on: [identity, learner, cv, gamification]
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      Auth__SigningPublicKeyPem: ${AUTH_PUBLIC_KEY_B64}
+      Gateway__IdentityBaseAddress: http://identity:8080/
+    ports: ["5080:8080"]
+
+volumes:
+  mysql-data:
