@@ -41,6 +41,18 @@ public sealed class GamificationDbContext : DbContext, IUnitOfWork
 
     Task IUnitOfWork.SaveChangesAsync(CancellationToken cancellationToken) => SaveChangesAsync(cancellationToken);
 
+    /// <summary>Bumps <see cref="Player.Version"/> on every changed player, so concurrent writers can't lose updates.</summary>
+    public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
+    {
+        foreach (var entry in ChangeTracker.Entries<Player>().Where(e => e.State == EntityState.Modified))
+        {
+            var version = entry.Property(p => p.Version);
+            version.CurrentValue = version.OriginalValue + 1;
+        }
+
+        return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+    }
+
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
         configurationBuilder.Properties<DateTime>().HaveConversion<UtcConverter>().HaveColumnType("datetime(6)");

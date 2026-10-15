@@ -56,6 +56,11 @@ progress. Schema `gamification`. BRD §4 is the rulebook: an action not in §4.1
 - **Arena:** XP summed over the window from the ledger; ties go to whoever got there first; movement compares with
   the board at local midnight; "rank up" compares with the rank the learner saw last. League and promotion are
   placeholders (MISS-11); `rewards` is always `{ coins: 0, voucher: null }` (A-317).
+  Learners with no XP in the window rank after everyone who earned some (name order): the learner always sees
+  themself, and Batch / Friends list every member. `photo` is left out when a player has none (`photo?: string`).
+- **One XP total:** `me/progress`, Rewards (`player.xp`, `wallet.xp`) and the Arena all read the ledger. Event
+  handlers for one learner run in parallel, so `players` has an optimistic concurrency `version`: a handler that
+  lost the race fails and its event is redelivered, instead of overwriting totals, streak or badge counters.
 
 ## Events
 Publishes `gamification.xp.awarded` (totals; Learner copies them) and `gamification.badge.earned`.

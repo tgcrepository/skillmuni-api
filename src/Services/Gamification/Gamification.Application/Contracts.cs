@@ -1,13 +1,16 @@
+using System.Text.Json.Serialization;
+
 namespace Gamification.Application;
 
 // Shapes match arena.api.ts, stats.api.ts and profile.api.ts (FRONTEND_TYPES.md), serialised camelCase.
 
+/// <summary>arena.api.ts <c>ArenaPlayer</c>: <c>photo?: string</c> is left out (not null) when the player has none.</summary>
 public sealed record ArenaPlayerDto(
     string Id,
     int Rank,
     string Name,
     string Initials,
-    string? Photo,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? Photo,
     int Xp,
     int Streak,
     int ModulesDone,
