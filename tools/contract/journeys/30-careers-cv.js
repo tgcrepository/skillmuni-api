@@ -148,7 +148,8 @@ module.exports = async (ctx, j) => {
   const info2 = await call('GET', 'jobs/job/job-1/apply', undefined, 200, 'uploaded CV listed');
   expectThat(info2.body?.cvs?.some(x => x.id === up.body?.id), 'GET jobs/job/job-1/apply', 'uploaded CV not offered');
 
-  const xpBeforeApply = await xpNow();
+  const prog = await call('GET', 'me/progress', undefined, 200, 'before applying');
+  const xpBeforeApply = prog.body?.xp ?? 0;
   const answers = { q1: 'Yes', q2: 'Immediately' };
   const app1 = await call('POST', 'jobs/job/job-1/apply', { cvId: up.body?.id, answers }, [200, 201]);
   expectThat(app1.body?.status === 'applied' && app1.body?.answers?.length === 2 && app1.body?.job?.appliedOn, 'POST jobs/job/job-1/apply', `application ${JSON.stringify(app1.body).slice(0, 200)}`);
@@ -271,6 +272,8 @@ module.exports = async (ctx, j) => {
     }
     await call('POST', `me/quests/${slug}/complete`, {}, 200);
   }
+  const deck = await call('GET', 'me/quests/your-flex-era/answers', undefined, 200, 'skill deck saved');
+  expectThat(deck.body?.skills?.length === 7, 'GET me/quests/your-flex-era/answers', `skills ${deck.body?.skills?.length}`);
   const fs1 = await poll(() => c.call('GET', 'fests/summary'), s => s.body?.profilePercent >= 60);
   r.record(j, 'GET', 'fests/summary', fs1, 200, 'after Quests 1–4');
   expectThat(fs1.body?.profilePercent >= 60 && fs1.body?.city === 'Pune', 'GET fests/summary', `after quests ${JSON.stringify(fs1.body).slice(0, 200)}`);
