@@ -5,7 +5,7 @@ Azure Service Bus events through an outbox. Rules: [`CLAUDE.md`](CLAUDE.md).
 
 | Path | What |
 |---|---|
-| `src/Gateway/SkillMuni.Gateway` | YARP `/api/v1/*`, JWT check, silent session refresh, rate limits, CORS |
+| `src/Gateway/SkillMuni.Gateway` | YARP `/api/v1/*`, JWT check, silent session refresh, rate limits (per IP: 1200/min, 120/min on auth and claim routes), CORS, security headers (nosniff, DENY, no-referrer, CSP `default-src 'none'`, HSTS over HTTPS, no server banner); unknown routes answer 404 problem+json `not-found` |
 | `src/BuildingBlocks` | `Common` (Result, paging, tenancy, events, blob contract) · `Web` (errors, auth, versioning, health) · `Messaging` (outbox, inbox, Service Bus) · `Storage` (Blob Storage) |
 | `src/Services/Identity` | Login, sign-up, sessions, Google, contact verification, institute claims, consents — see its [README](src/Services/Identity/README.md) |
 | `src/Services/Cv` | CV upload, background parsing (Document Intelligence), summary, quest pre-fill — see its [README](src/Services/Cv/README.md) |
