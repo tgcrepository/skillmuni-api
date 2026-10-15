@@ -100,6 +100,9 @@ public sealed class LaunchpadEndpointsTests(CareersApiFactory api)
         Assert.True(board.GetProperty("jobs").GetArrayLength() > 0);
         var top = board.GetProperty("jobs")[0];
         Assert.Equal("recommended", top.GetProperty("status").GetString());
+
+        // matches.api.ts MatchSkill: `note?` is optional, so it is left out rather than sent as null.
+        Assert.All(top.GetProperty("skills").EnumerateArray(), s => Assert.False(s.TryGetProperty("note", out _)));
         var id = top.GetProperty("id").GetString();
 
         Assert.Equal(HttpStatusCode.NoContent, (await client.PostJsonAsync($"/api/v1/me/matches/{id}/save", new { saved = true })).StatusCode);
