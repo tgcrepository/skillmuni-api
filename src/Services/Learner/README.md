@@ -110,3 +110,20 @@ Erasure (`identity.learner.erased`) deletes blobs, then every row.
 Local `dotnet run` without compose: `dotnet user-secrets set Learner:Security:EncryptionKey "$(openssl rand -base64 32)"`.
 
 New migration: `dotnet ef migrations add <Name> --project src/Services/Learner/Learner.Infrastructure --startup-project src/Services/Learner/Learner.Api -o Persistence/Migrations`.
+
+## Erasure tombstone (MISS-08)
+
+On `identity.learner.erased` the learner's rows are deleted and a tombstone stays in `erased_learners`
+(`learner_id`, `erased_at` — nothing else, no tenant, no personal data; shared building block
+`AddErasureTombstones<TContext>()`). An access token stays valid for up to 10 minutes after erasure, so:
+
+- every request from an erased account gets **410 `learner-erased`** (`ErasedAccountMiddleware`, SkillMuni.Web) instead
+  of recreating an empty row;
+- an event about an erased learner (any event implementing `ILearnerEvent`) delivered late is recorded in the inbox and
+  skipped.
+
+## Job-profile row
+
+`job_profiles` has one row per learner (`ux_job_profiles_learner`), created on first use by a request or by
+`cv.parse.completed`. The create is an insert-if-absent (`INSERT … ON DUPLICATE KEY UPDATE`) followed by a read, so
+two parse results (or a parse result and a request) arriving together never hit the unique key.
