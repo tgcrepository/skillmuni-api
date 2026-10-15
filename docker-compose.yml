@@ -65,6 +65,7 @@ services:
     build:
       context: .
       dockerfile: src/Services/Identity/Identity.Api/Dockerfile
+    restart: on-failure  # starts again if MySQL / Service Bus are still warming up
     depends_on:
       mysql:
         condition: service_healthy
@@ -86,6 +87,7 @@ services:
     build:
       context: .
       dockerfile: src/Services/Learner/Learner.Api/Dockerfile
+    restart: on-failure  # starts again if MySQL / Service Bus are still warming up
     depends_on:
       mysql:
         condition: service_healthy
@@ -109,6 +111,7 @@ services:
     build:
       context: .
       dockerfile: src/Services/Cv/Cv.Api/Dockerfile
+    restart: on-failure  # starts again if MySQL / Service Bus are still warming up
     depends_on:
       mysql:
         condition: service_healthy
@@ -132,6 +135,7 @@ services:
     build:
       context: .
       dockerfile: src/Services/Gamification/Gamification.Api/Dockerfile
+    restart: on-failure  # starts again if MySQL / Service Bus are still warming up
     depends_on:
       mysql:
         condition: service_healthy
@@ -150,6 +154,7 @@ services:
     build:
       context: .
       dockerfile: src/Services/Assessment/Assessment.Api/Dockerfile
+    restart: on-failure  # starts again if MySQL / Service Bus are still warming up
     depends_on:
       mysql:
         condition: service_healthy
@@ -168,6 +173,7 @@ services:
     build:
       context: .
       dockerfile: src/Gateway/SkillMuni.Gateway/Dockerfile
+    restart: on-failure  # starts again if MySQL / Service Bus are still warming up
     depends_on: [identity, learner, cv, gamification, assessment, learning, muni, platform, careers]
     environment:
       ASPNETCORE_ENVIRONMENT: Development
@@ -179,6 +185,7 @@ services:
     build:
       context: .
       dockerfile: src/Services/Learning/Learning.Api/Dockerfile
+    restart: on-failure  # starts again if MySQL / Service Bus are still warming up
     depends_on:
       mysql:
         condition: service_healthy
@@ -197,6 +204,7 @@ services:
     build:
       context: .
       dockerfile: src/Services/Muni/Muni.Api/Dockerfile
+    restart: on-failure  # starts again if MySQL / Service Bus are still warming up
     depends_on:
       mysql:
         condition: service_healthy
@@ -215,6 +223,7 @@ services:
     build:
       context: .
       dockerfile: src/Services/Platform/Platform.Api/Dockerfile
+    restart: on-failure  # starts again if MySQL / Service Bus are still warming up
     depends_on:
       mysql:
         condition: service_healthy
@@ -233,6 +242,7 @@ services:
     build:
       context: .
       dockerfile: src/Services/Careers/Careers.Api/Dockerfile
+    restart: on-failure  # starts again if MySQL / Service Bus are still warming up
     depends_on:
       mysql:
         condition: service_healthy
