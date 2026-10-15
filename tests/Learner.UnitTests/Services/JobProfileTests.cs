@@ -21,8 +21,14 @@ public sealed class JobProfileTests
         await _h.Quests.SavePartAsync(who, "hit-me-up", 1, LearnerHarness.Part(new { postal = "411038", region = "Maharashtra", city = "Pune", area = "Kothrud", linkedin = "linkedin.com/in/yash" }, done: false), _ct);
         await _h.Quests.SavePartAsync(who, "big-brain-stuff", 1, LearnerHarness.Part(new
         {
-            level = "graduate", status = "completed", degree = "B.Com", branch = "Accounting & Finance",
-            institute = "Savitribai Phule Pune University", year = "2024", scoreKind = "cgpa", score = "7.4",
+            level = "graduate",
+            status = "completed",
+            degree = "B.Com",
+            branch = "Accounting & Finance",
+            institute = "Savitribai Phule Pune University",
+            year = "2024",
+            scoreKind = "cgpa",
+            score = "7.4",
         }, done: false), _ct);
         await _h.Quests.SavePartAsync(who, "your-flex-era", 1, LearnerHarness.Part(new
         {
