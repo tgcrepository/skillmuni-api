@@ -23,6 +23,6 @@ module.exports = async (ctx, j) => {
   r.record(j, 'POST', 'auth/password-reset', await anon.call('POST', 'auth/password-reset', { email: 'nobody@example.com' }), [200, 202]);
   r.record(j, 'POST', 'auth/register', await anon.call('POST', 'auth/register', { firstName: 'A', lastName: 'B', email: c.email, password: 'Skillmuni123', consent: true }), 409, 'email-taken');
   r.record(j, 'POST', 'auth/email/resend', await anon.call('POST', 'auth/email/resend', { email: ctx.unique('x') + '@example.com' }), [200, 404, 422]);
-  r.record(j, 'POST', 'auth/google', await anon.call('POST', 'auth/google', { credential: 'not-a-real-token' }), [401, 422]);
+  r.record(j, 'POST', 'auth/google', await anon.call('POST', 'auth/google', { credential: 'not-a-real-token' }), [401, 422, 503], 'no Google client id in Development → 503 google-unavailable');
   ctx.state.main = c;
 };

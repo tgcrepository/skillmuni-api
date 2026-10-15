@@ -23,7 +23,7 @@
           {
             "Name": "skillmuni-events",
             "Properties": {
-              "DefaultMessageTimeToLive": "PT24H",
+              "DefaultMessageTimeToLive": "PT1H",
               "DuplicateDetectionHistoryTimeWindow": "PT20S",
               "RequiresDuplicateDetection": false
             },
@@ -32,7 +32,7 @@
                 "Name": "audit",
                 "Properties": {
                   "DeadLetteringOnMessageExpiration": false,
-                  "DefaultMessageTimeToLive": "PT24H",
+                  "DefaultMessageTimeToLive": "PT1H",
                   "LockDuration": "PT1M",
                   "MaxDeliveryCount": 5,
                   "ForwardDeadLetteredMessagesTo": "",
@@ -44,7 +44,7 @@
                 "Name": "learner",
                 "Properties": {
                   "DeadLetteringOnMessageExpiration": false,
-                  "DefaultMessageTimeToLive": "PT24H",
+                  "DefaultMessageTimeToLive": "PT1H",
                   "LockDuration": "PT1M",
                   "MaxDeliveryCount": 5,
                   "ForwardDeadLetteredMessagesTo": "",
@@ -121,7 +121,7 @@
                 "Name": "cv",
                 "Properties": {
                   "DeadLetteringOnMessageExpiration": false,
-                  "DefaultMessageTimeToLive": "PT24H",
+                  "DefaultMessageTimeToLive": "PT1H",
                   "LockDuration": "PT1M",
                   "MaxDeliveryCount": 5,
                   "ForwardDeadLetteredMessagesTo": "",
@@ -144,7 +144,7 @@
                 "Name": "gamification",
                 "Properties": {
                   "DeadLetteringOnMessageExpiration": false,
-                  "DefaultMessageTimeToLive": "PT24H",
+                  "DefaultMessageTimeToLive": "PT1H",
                   "LockDuration": "PT1M",
                   "MaxDeliveryCount": 5,
                   "ForwardDeadLetteredMessagesTo": "",
@@ -329,7 +329,7 @@
                 "Name": "identity",
                 "Properties": {
                   "DeadLetteringOnMessageExpiration": false,
-                  "DefaultMessageTimeToLive": "PT24H",
+                  "DefaultMessageTimeToLive": "PT1H",
                   "LockDuration": "PT1M",
                   "MaxDeliveryCount": 5,
                   "ForwardDeadLetteredMessagesTo": "",
@@ -352,7 +352,7 @@
                 "Name": "assessment",
                 "Properties": {
                   "DeadLetteringOnMessageExpiration": false,
-                  "DefaultMessageTimeToLive": "PT24H",
+                  "DefaultMessageTimeToLive": "PT1H",
                   "LockDuration": "PT1M",
                   "MaxDeliveryCount": 5,
                   "ForwardDeadLetteredMessagesTo": "",
@@ -384,7 +384,7 @@
                 "Name": "learning",
                 "Properties": {
                   "DeadLetteringOnMessageExpiration": false,
-                  "DefaultMessageTimeToLive": "PT24H",
+                  "DefaultMessageTimeToLive": "PT1H",
                   "LockDuration": "PT1M",
                   "MaxDeliveryCount": 5,
                   "ForwardDeadLetteredMessagesTo": "",
@@ -416,7 +416,7 @@
                 "Name": "muni",
                 "Properties": {
                   "DeadLetteringOnMessageExpiration": false,
-                  "DefaultMessageTimeToLive": "PT24H",
+                  "DefaultMessageTimeToLive": "PT1H",
                   "LockDuration": "PT1M",
                   "MaxDeliveryCount": 5,
                   "ForwardDeadLetteredMessagesTo": "",
@@ -475,7 +475,7 @@
                 "Name": "platform",
                 "Properties": {
                   "DeadLetteringOnMessageExpiration": false,
-                  "DefaultMessageTimeToLive": "PT24H",
+                  "DefaultMessageTimeToLive": "PT1H",
                   "LockDuration": "PT1M",
                   "MaxDeliveryCount": 5,
                   "ForwardDeadLetteredMessagesTo": "",
@@ -507,7 +507,7 @@
                 "Name": "careers",
                 "Properties": {
                   "DeadLetteringOnMessageExpiration": false,
-                  "DefaultMessageTimeToLive": "PT24H",
+                  "DefaultMessageTimeToLive": "PT1H",
                   "LockDuration": "PT1M",
                   "MaxDeliveryCount": 5,
                   "ForwardDeadLetteredMessagesTo": "",

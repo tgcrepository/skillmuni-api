@@ -112,7 +112,7 @@ class Report {
     if (r.status >= 400 && r.status !== 0) {
       if (!r.contentType.includes('application/problem+json')) problems.push(`error content-type ${r.contentType}`);
       else if (typeof r.body?.message !== 'string' || !Array.isArray(r.body?.errors?.code)) problems.push('error body lacks message / errors.code');
-      if (r.status >= 500) problems.push(`server error ${r.status}`);
+      if (r.status >= 500 && !exp.includes(r.status)) problems.push(`server error ${r.status}`);
     }
     if (!c && !note.includes('extra')) problems.push('no frontend contract entry for this call');
     this.rows.push({ journey, call: `${verb} ${apiPath}`, status: r.status, ms: r.ms, problems, note });
