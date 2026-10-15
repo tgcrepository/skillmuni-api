@@ -37,17 +37,19 @@ jobs:
           # Probe each service's /health/ready from inside the compose network (the gateway answers 401 before proxying).
           svcs="identity learner cv gamification assessment learning muni platform careers gateway"
           net=$(docker network ls --format '{{.Name}}' | grep -m1 skillmuni)
-          for i in $(seq 1 72); do
+          docker run -d --name probe --network "$net" curlimages/curl:8.10.1 sleep 3600 >/dev/null
+          for i in $(seq 1 60); do
             down=""
             for s in $svcs; do
-              code=$(docker run --rm --network "$net" curlimages/curl:8.10.1 -s -o /dev/null -w '%{http_code}' "http://$s:8080/health/ready" 2>/dev/null || echo 000)
+              code=$(docker exec probe curl -s -m 3 -o /dev/null -w '%{http_code}' "http://$s:8080/health/ready" 2>/dev/null || echo 000)
               [ "$code" = "200" ] || down="$down $s($code)"
             done
             [ -z "$down" ] && echo "all services ready after $((i*5)) s" && exit 0
             echo "waiting:$down"
+            if docker compose ps -a --format '{{.Service}} {{.State}}' | grep -q '^mysql exited'; then echo "mysql exited"; break; fi
             sleep 5
           done
-          docker compose ps -a; docker compose logs --no-color --tail=60 mysql; exit 1
+          docker compose ps -a; docker compose logs --no-color --tail=80 mysql; exit 1
 
       - name: Regression journeys
         id: journeys
