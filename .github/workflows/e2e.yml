@@ -1,0 +1,87 @@
+name: e2e
+
+# Full regression: boots every service with docker compose (MySQL, Service Bus emulator, Redis, Azurite, gateway)
+# and drives the API like the Angular app does (tools/contract), checking every response against the frontend types.
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Local secrets
+        run: ./scripts/dev-setup.sh
+
+      - name: Build images
+        run: docker compose build --parallel 2>&1 | tail -40
+
+      - name: Start the stack
+        run: docker compose up -d
+
+      - name: Wait for every service
+        run: |
+          # Each probe goes through the gateway; anything but a connection error / 502 / 503 / 504 means the service answers.
+          probes="session geo/IN/regions assessments/career home learn/modules/brain-vita jobs/summary fests/summary muni/welcome me/progress stats/rewards profile cv/00000000-0000-0000-0000-000000000000/status tenant/theme"
+          for i in $(seq 1 90); do
+            down=""
+            for p in $probes; do
+              code=$(curl -s -o /dev/null -w '%{http_code}' "http://localhost:5080/api/v1/$p" || echo 000)
+              case "$code" in 000|502|503|504) down="$down $p($code)";; esac
+            done
+            [ -z "$down" ] && echo "all services up after $((i*5)) s" && exit 0
+            sleep 5
+          done
+          echo "still down:$down"; docker compose ps; exit 1
+
+      - name: Regression journeys
+        id: journeys
+        run: |
+          set -o pipefail
+          node tools/contract/run-contract.js http://localhost:5080 2>journeys.err | tee journeys.txt
+
+      - name: Collect logs
+        if: always()
+        run: |
+          docker compose ps -a > ps.txt 2>&1 || true
+          docker compose logs --no-color > compose.log 2>&1 || true
+          grep -E "fail:|crit:|Unhandled|Exception|error" compose.log | grep -v -E "EndOfStream|BadHttpRequest" | awk '!seen[$0]++' | head -150 > errors.txt || true
+
+      - name: Post results to the pull request
+        if: ${{ !cancelled() && github.event_name == 'pull_request' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          touch journeys.txt journeys.err ps.txt errors.txt
+          {
+            echo "### e2e regression (${GITHUB_SHA::7}): ${{ job.status }}"
+            echo '```'
+            head -c 30000 journeys.txt
+            echo '```'
+            echo "<details><summary>containers</summary>"; echo; echo '```'; cat ps.txt; echo '```'; echo "</details>"
+            echo "<details><summary>server errors (first 150)</summary>"; echo; echo '```'; head -c 20000 errors.txt; echo '```'; echo "</details>"
+          } > body.md
+          head -c 62000 body.md > body2.md
+          gh api repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments -F body=@body2.md > /dev/null
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-logs
+          path: |
+            compose.log
+            journeys.txt
+            journeys.err
