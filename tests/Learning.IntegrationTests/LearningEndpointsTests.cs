@@ -90,7 +90,7 @@ public sealed class LearningEndpointsTests(LearningApiFactory api)
         Assert.Equal("brain-vita~non-verbal-reasoning~0", id);
         Assert.Equal(3, quiz.GetProperty("questions").GetArrayLength());
         Assert.False(quiz.GetProperty("alreadyPassed").GetBoolean());
-        Assert.Equal(0, quiz.GetProperty("draft").EnumerateObject().Count());
+        Assert.Empty(quiz.GetProperty("draft").EnumerateObject());
 
         Assert.Equal(HttpStatusCode.NoContent, (await client.PutJsonAsync($"/api/v1/learn/quizzes/{id}/draft", new { answers = new Dictionary<string, string> { ["nv-q1"] = "nv-q1-o1" } })).StatusCode);
         quiz = await (await client.GetAsync($"{NonVerbal}/quiz")).JsonAsync(HttpStatusCode.OK);
@@ -116,7 +116,7 @@ public sealed class LearningEndpointsTests(LearningApiFactory api)
         Assert.Equal("done", topic.GetProperty("briefs")[0].GetProperty("status").GetString());
         Assert.Equal(2, topic.GetProperty("briefs")[0].GetProperty("xp").GetInt32());
         Assert.Equal(2, topic.GetProperty("xp").GetInt32());
-        Assert.Equal(0, (await (await client.GetAsync($"{NonVerbal}/quiz")).JsonAsync(HttpStatusCode.OK)).GetProperty("draft").EnumerateObject().Count());
+        Assert.Empty((await (await client.GetAsync($"{NonVerbal}/quiz")).JsonAsync(HttpStatusCode.OK)).GetProperty("draft").EnumerateObject());
     }
 
     [Fact]
