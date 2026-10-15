@@ -116,6 +116,10 @@ module.exports = async (ctx, j) => {
   // Muni chat (Figma Muni Chat v2): a brand-new learner.
   // ================================================================================================================
   const meera = await ctx.newLearner(j, 'Meera', 'Iyer');
+  // Learner copies the verified email from identity.learner.registered (asynchronous); Muni's profile card reads it.
+  const own = await poll(() => meera.call('POST', 'profile/reveal', { field: 'email' }), x => x.body?.value === meera.email, 30000);
+  r.record(j, 'POST', 'profile/reveal', own, 200, 'Learner has the verified email');
+  check(own.body?.value === meera.email, 'POST profile/reveal', `Learner never got the email: ${own.text}`);
   let welcome = r.record(j, 'GET', 'muni/welcome', await meera.call('GET', 'muni/welcome'), 200);
   const w = welcome.body || {};
   check(w.firstName === 'Meera', 'GET muni/welcome', `firstName ${w.firstName}, expected Meera`);

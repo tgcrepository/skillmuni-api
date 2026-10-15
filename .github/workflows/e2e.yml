@@ -51,6 +51,19 @@ jobs:
           done
           docker compose ps -a; docker compose logs --no-color --tail=80 mysql; exit 1
 
+      - name: Wait until codes can be sent
+        run: |
+          # Healthy services can still run ahead of the Service Bus emulator's queues: sign-up answers 503
+          # notifications-unavailable until the notifications queue takes messages.
+          for i in $(seq 1 45); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' -X POST http://localhost:5080/api/v1/auth/register \
+              -H 'Content-Type: application/json' \
+              -d "{\"firstName\":\"Probe\",\"lastName\":\"Ready\",\"email\":\"probe-$i-$RANDOM@example.com\",\"password\":\"Skillmuni123\",\"consent\":true}")
+            [ "$code" = "200" ] && echo "codes can be sent after $((i*2)) s" && exit 0
+            sleep 2
+          done
+          echo "sign-up still answers $code"
+
       - name: Regression journeys
         id: journeys
         run: |
