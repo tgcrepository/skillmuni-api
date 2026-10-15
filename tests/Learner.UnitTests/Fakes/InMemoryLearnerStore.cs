@@ -112,6 +112,9 @@ public sealed class InMemoryLearnerStore :
     public Task<bool> ExistsAsync(Guid learnerId, string programmeCode, CancellationToken cancellationToken) =>
         Task.FromResult(Enrolments.Any(e => e.LearnerId == learnerId && e.ProgrammeCode == programmeCode));
 
+    public Task<bool> AnyAsync(Guid learnerId, CancellationToken cancellationToken) =>
+        Task.FromResult(Enrolments.Any(e => e.LearnerId == learnerId));
+
     public void Add(Enrolment enrolment) => Enrolments.Add(enrolment);
 
     // Feedback

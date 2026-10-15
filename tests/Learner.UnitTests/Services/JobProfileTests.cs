@@ -18,7 +18,7 @@ public sealed class JobProfileTests
         var who = LearnerHarness.NewLearner("Yash");
         await _h.Quests.SavePartAsync(who, "who-dis", 1, LearnerHarness.Part(new { firstName = "Yash", lastName = "Pohare" }), _ct);
         _h.Learner(who).SetVerifiedContact("+919876540697", "yash.pohare@example.com", _h.Clock.GetUtcNow().UtcDateTime);
-        await _h.Quests.SavePartAsync(who, "hit-me-up", 1, LearnerHarness.Part(new { postal = "411038", region = "Maharashtra", city = "Pune", area = "Kothrud", linkedin = "linkedin.com/in/yash" }, done: false), _ct);
+        await _h.Quests.SavePartAsync(who, "hit-me-up", 1, LearnerHarness.Part(new { postal = "411038", region = "Maharashtra", city = "Pune", area = "Kothrud", whatsapp = true, linkedin = "linkedin.com/in/yash" }, done: false), _ct);
         await _h.Quests.SavePartAsync(who, "big-brain-stuff", 1, LearnerHarness.Part(new
         {
             level = "graduate",
@@ -34,12 +34,12 @@ public sealed class JobProfileTests
         {
             skills = new object[]
             {
-                new { id = "customer-service", name = "Customer service", category = "people", level = 3, signature = true },
-                new { id = "excel", name = "Microsoft Excel", category = "business", level = 2, signature = false },
-                new { id = "tally", name = "Tally basics", category = "business", level = 0, signature = false },
+                new { id = "customer-service", name = "Customer service", category = "people", level = 3, source = "suggested" },
+                new { id = "excel", name = "Microsoft Excel", category = "business", level = 2, source = "search" },
+                new { id = "tally", name = "Tally basics", category = "business", level = 0, source = "custom" },
             },
             languages = new[] { new { name = "Hindi", fluency = "native", speak = true, read = true, write = true } },
-            trophies = new[] { new { id = "nsdc", name = "Data capturing certificate", issuer = "NSDC", year = "2024", verified = true } },
+            trophies = new[] { new { id = "nsdc", name = "Data capturing certificate", issuer = "NSDC", issuedOn = "2024-03", verified = true, linkedSkills = new[] { "excel" }, source = "manual" } },
         }, done: false), _ct);
         await _h.Quests.SavePartAsync(who, "work-lore", 1, LearnerHarness.Part(new
         {
@@ -71,7 +71,7 @@ public sealed class JobProfileTests
         Assert.Equal(("Yash Pohare", "YP", "Customer support executive · BPO voice"), (profile.Name, profile.Initials, profile.Headline));
         Assert.Equal(new JobArchetypeDto("People Pro", "People"), profile.Archetype);
         Assert.Equal(100, profile.Radar!.People);
-        Assert.Equal(new[] { new SignatureSkillDto("Customer service", 3) }, profile.Signature);
+        Assert.Equal(new[] { new SignatureSkillDto("Customer service", 3), new SignatureSkillDto("Microsoft Excel", 2) }, profile.Signature);
         Assert.Equal(new JobProfileCountsDto(3, 1, 1), profile.Counts);
         Assert.Equal(8, profile.ByQuest.Count);
 

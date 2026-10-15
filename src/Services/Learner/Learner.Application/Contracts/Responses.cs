@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace Learner.Application.Contracts;
 
 // Response shapes match the frontend types (FRONTEND_TYPES.md), serialised camelCase.
@@ -89,7 +91,14 @@ public sealed record FileIdDto(string FileId);
 
 public sealed record ImportedTrophyDto(string Name, string Issuer, string IssuedOn, string CredentialId);
 
-public sealed record EscoSkillDto(string Uri, string Label, string Type, string Category, string? EscoCategory, IReadOnlyList<string>? Alt);
+/// <summary>esco: optional fields are left out (not null) when ESCO has none, like the frontend type's <c>?</c>.</summary>
+public sealed record EscoSkillDto(
+    string Uri,
+    string Label,
+    string Type,
+    string Category,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? EscoCategory,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] IReadOnlyList<string>? Alt);
 
 public sealed record EscoSearchDto(int Total, IReadOnlyList<EscoSkillDto> Results);
 

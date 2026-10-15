@@ -52,6 +52,7 @@ renders (A-262: one record built from the 8 quests, no second form).
 - **BR-119:** on `identity.claim.confirmed` quests 1–5 count as done and Learner publishes their step events (all paid)
   and quest events, so Gamification credits the normal 550 XP and badges. If it arrives before
   `identity.learner.registered`, the learner is started from it and the registration event fills in name and contacts.
+- **BR-113:** the programme bonus pays +100 once per learner; a second programme enrols with `xpEarned: 0`.
 - **BR-110:** the first time every step is filled (a skipped optional step is not), Learner publishes
   `learner.job-profile.completed` once (`learners.job_profile_completed_at`).
 
@@ -63,6 +64,17 @@ renders (A-262: one record built from the 8 quests, no second form).
   certificates not on the trophy shelf (add), an email or mobile that differs from the verified one (keep).
 - `strength.jobMatches` is 0 and `pending` is empty: matching belongs to Careers, programme requirements aren't modelled.
 - The radar is the deck's skill levels per category scaled to the strongest; `archetype.strongest` is the top category.
+- Field names are the quest screens' own (`features/quests/parts/*.ts`, `data/*.ts`): signature moves = the deck's
+  first three skills with a level (q4-deck.ts order); `invitesBy` = "Email" (+ "WhatsApp" when Quest 2 opted in) while
+  Quest 8 `invites` is on, else "Invites off"; proofs come from Quest 7 `receipts`, an object keyed `edu`, `tl-<id>`,
+  `tr-<id>`, `ch-<id>` with `status` checking/verified (a verified or DigiLocker trophy is verified on its own);
+  timeline entries: school levels titled `<level> · <stream>` under their board, courses by `name`, other
+  qualifications (`level: "education"`) by `degree` or `qual` · `branch`; option labels from arc.ts (shifts, notice,
+  salary). LinkedIn on the CV contact comes from the latest CV read (the quests don't ask for it).
+- Careers profile (`internal/learners/{id}/careers-profile`): a deck skill is `verified` when linked (by skill id) from
+  a verified trophy's `linkedSkills` or a work chapter (`skills`) whose `ch-<id>` receipt is verified; `relocate` =
+  "relocate" in Pick Your Arc's `where`.
+- Quest 1's `birthday` ("DD / MM / YYYY") and `gender` fill the Profile's date of birth and gender while those are empty.
 
 ## Events
 Publishes: `learner.quest.step-completed` (`paid`), `learner.quest.completed`, `learner.profile.task-completed`,
@@ -92,6 +104,7 @@ Erasure (`identity.learner.erased`) deletes blobs, then every row.
 | `Learner:DigiLocker:Mode` | `off` · `sandbox` (Development/Testing only) |
 | `Learner:Quests`, `Learner:Levels`, `Learner:Xp`, `Learner:SkillOptions` | optional overrides of the code defaults |
 | `Learner:JobProfile:ShareBaseUrl`, `ExpiryChoices`, `MaxCvBytes` | share link base (`https://skillmuni.app`), 7/30/90, 5 MB |
+| `Learner:SampleProgrammes` | programme codes every tenant has, stored for the tenant on first lookup; empty in production, the two `programme.handlers.ts` codes in Development |
 | `ServiceBus:Subscription` | `learner` |
 
 Local `dotnet run` without compose: `dotnet user-secrets set Learner:Security:EncryptionKey "$(openssl rand -base64 32)"`.
