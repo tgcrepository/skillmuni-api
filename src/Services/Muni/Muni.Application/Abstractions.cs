@@ -39,6 +39,7 @@ public interface IRatingRepository
 }
 
 /// <summary>MISS-08 erasure: every row this service holds for one learner. Safe to run twice.</summary>
+/// <summary>Deletes the learner's chat lines and ratings; the learner row itself becomes a tombstone (handler).</summary>
 public interface IMuniDataEraser
 {
     Task EraseAsync(Guid learnerId, CancellationToken cancellationToken);
@@ -104,7 +105,8 @@ public sealed record LearnerSnapshot(
     IReadOnlyList<MuniGap> Gaps,
     string? Archetype,
     int Streak,
-    DateTime? JoinedAt);
+    DateTime? JoinedAt,
+    bool Erased = false);
 
 /// <summary>A reply before it is stored. <see cref="Topic"/> is the catalogue entry that answered (or <c>fallback</c>).</summary>
 public sealed record MuniAnswer(string Topic, IReadOnlyList<MuniBlock> Blocks, IReadOnlyList<string> Chips);

@@ -5,7 +5,9 @@ using Learner.Application.Services;
 using Learner.Domain;
 using Microsoft.Extensions.Logging;
 using SkillMuni.Common.Messaging;
+using SkillMuni.Common.Privacy;
 using SkillMuni.Common.Storage;
+using SkillMuni.Common.Tenancy;
 
 namespace Learner.Application.Handlers;
 
@@ -76,11 +78,17 @@ public sealed class ContactVerifiedHandler(ILearnerRepository learners, TimeProv
 /// normal step and quest XP for them (550) through the usual events: every step of each newly done quest, then the
 /// quest itself (its badge follows in Gamification). Steps already paid are deduplicated by Gamification's ledger.
 /// </summary>
+/// <remarks>
+/// <c>identity.learner.registered</c> (published at the claim's code step) can be delivered after this event. The
+/// learner is then started here and the registration event fills in the name and contacts when it lands
+/// (<see cref="AccountRegisteredHandler"/>), so the claimed quests and their 550 XP are never dropped.
+/// </remarks>
 public sealed partial class ClaimConfirmedHandler(
     ILearnerRepository learners,
     QuestCatalog catalog,
     IJobProfileCompletion jobProfile,
     IOutbox outbox,
+    ITenantContext tenant,
     TimeProvider clock,
     ILogger<ClaimConfirmedHandler> logger) : IIntegrationEventHandler<ClaimConfirmed>
 {
@@ -88,13 +96,15 @@ public sealed partial class ClaimConfirmedHandler(
 
     public async Task HandleAsync(ClaimConfirmed e, CancellationToken cancellationToken)
     {
+        var now = clock.GetUtcNow().UtcDateTime;
         if (await learners.GetAsync(e.AccountId, cancellationToken) is not { } learner)
         {
+            learner = LearnerProfile.Create(e.AccountId, e.TenantId, tenant.Market, string.Empty, string.Empty, now);
+            learners.Add(learner);
             LogNoLearner(logger, e.AccountId);
-            return;
         }
 
-        var done = learner.FastForwardQuests(PrefilledQuests, clock.GetUtcNow().UtcDateTime);
+        var done = learner.FastForwardQuests(PrefilledQuests, now);
         foreach (var quest in catalog.Quests.Where(q => done.Contains(q.Number)))
         {
             for (var part = 1; part <= quest.Parts.Count; part++)
@@ -108,12 +118,19 @@ public sealed partial class ClaimConfirmedHandler(
         await jobProfile.CheckAsync(learner, null, null, cancellationToken);
     }
 
-    [LoggerMessage(Level = LogLevel.Warning, Message = "Claim confirmed before the learner exists {LearnerId}")]
+    [LoggerMessage(Level = LogLevel.Information, Message = "Claim confirmed before the registration event: learner started {LearnerId}")]
     private static partial void LogNoLearner(ILogger logger, Guid learnerId);
 }
 
-/// <summary>MISS-08: files first (so a retry can still find them), then every row.</summary>
-public sealed class AccountErasedHandler(ILearnerDataEraser eraser, IBlobStore blobs, ILogger<AccountErasedHandler> logger)
+/// <summary>
+/// MISS-08: files first (so a retry can still find them), then every row; a tombstone (id + time) stays so the
+/// learner's still-valid token gets 410 and late events are skipped instead of recreating an empty profile.
+/// </summary>
+public sealed class AccountErasedHandler(
+    ILearnerDataEraser eraser,
+    IBlobStore blobs,
+    IErasureTombstones tombstones,
+    ILogger<AccountErasedHandler> logger)
     : IIntegrationEventHandler<AccountErased>
 {
     public async Task HandleAsync(AccountErased e, CancellationToken cancellationToken)
@@ -125,6 +142,7 @@ public sealed class AccountErasedHandler(ILearnerDataEraser eraser, IBlobStore b
         }
 
         await eraser.EraseAsync(e.AccountId, cancellationToken);
+        await tombstones.MarkErasedAsync(e.AccountId, cancellationToken);
         logger.LogInformation("Learner data erased {LearnerId} {Files}", e.AccountId, names.Count);
     }
 }
@@ -166,13 +184,8 @@ public sealed class CvParsedHandler(
     public async Task HandleAsync(CvParsed e, CancellationToken cancellationToken)
     {
         var now = clock.GetUtcNow().UtcDateTime;
-        var settings = await jobProfiles.FindAsync(e.LearnerId, cancellationToken);
-        if (settings is null)
-        {
-            settings = JobProfileSettings.Create(e.TenantId, e.LearnerId, ShareCodes.New(), now);
-            jobProfiles.Add(settings);
-        }
-
+        // Two parse results close together must not both insert the row (duplicate key → redelivery, error log).
+        var settings = await jobProfiles.GetOrCreateAsync(JobProfileSettings.Create(e.TenantId, e.LearnerId, ShareCodes.New(), now), cancellationToken);
         settings.KeepCvRead(e.CvId, JsonSerializer.Serialize(e.Prefill), now);
 
         foreach (var (slug, values) in e.Prefill)
@@ -182,13 +195,9 @@ public sealed class CvParsedHandler(
                 continue;
             }
 
-            var record = await answers.FindAsync(e.LearnerId, slug, cancellationToken);
-            if (record is null)
-            {
-                record = QuestAnswers.Start(e.TenantId, e.LearnerId, slug, now);
-                answers.Add(record);
-            }
-
+            // Insert-if-absent: the learner may be saving this quest (or another parse result arriving) right now.
+            var record = await answers.FindAsync(e.LearnerId, slug, cancellationToken)
+                ?? await answers.GetOrCreateAsync(QuestAnswers.Start(e.TenantId, e.LearnerId, slug, now), cancellationToken);
             record.Replace(AnswersJson.Seed(record.AnswersJson, values), now);
         }
     }

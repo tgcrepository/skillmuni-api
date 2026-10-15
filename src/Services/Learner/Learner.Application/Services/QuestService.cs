@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using Learner.Application.Abstractions;
 using Learner.Application.Contracts;
@@ -46,6 +47,13 @@ public sealed partial class QuestService(
         }
 
         var saved = await answers.FindAsync(who.Id, slug, cancellationToken);
+        if (saved is null && slug == WhoDis)
+        {
+            // Quest 1 starts with the registered name (A-232), even before the sign-up event has seeded the answers.
+            var learner = await accessor.GetOrCreateAsync(who, cancellationToken);
+            return AnswersJson.ToElement(JsonSerializer.Serialize(new { firstName = learner.FirstName, lastName = learner.LastName }));
+        }
+
         return AnswersJson.ToElement(saved?.AnswersJson ?? AnswersJson.Empty);
     }
 
@@ -65,17 +73,19 @@ public sealed partial class QuestService(
         var learner = await accessor.GetOrCreateAsync(who, cancellationToken);
         var now = clock.GetUtcNow().UtcDateTime;
 
-        var record = await answers.FindAsync(who.Id, slug, cancellationToken);
-        if (record is null)
-        {
-            record = QuestAnswers.Start(tenant.TenantId, who.Id, slug, now);
-            answers.Add(record);
-        }
-
-        var merged = AnswersJson.Merge(record.AnswersJson, request.Values);
+        var existing = await answers.FindAsync(who.Id, slug, cancellationToken);
+        var merged = AnswersJson.Merge(existing?.AnswersJson ?? AnswersJson.Empty, request.Values);
         if (AnswersJson.Utf8Length(merged) > options.Value.MaxQuestAnswersBytes)
         {
             return LearnerErrors.AnswersTooLarge;
+        }
+
+        // First save of this quest: insert-if-absent, so a CV pre-fill (cv.parse.completed) creating the same row at
+        // the same moment can't hit the unique key; if it won, merge onto what it stored.
+        var record = existing ?? await answers.GetOrCreateAsync(QuestAnswers.Start(tenant.TenantId, who.Id, slug, now), cancellationToken);
+        if (existing is null)
+        {
+            merged = AnswersJson.Merge(record.AnswersJson, request.Values);
         }
 
         record.Replace(merged, now);
@@ -84,6 +94,16 @@ public sealed partial class QuestService(
         if (slug == WhoDis && AnswersJson.ReadString(request.Values, "firstName") is { Length: > 0 } first)
         {
             learner.Rename(first, AnswersJson.ReadString(request.Values, "lastName") ?? learner.LastName, now);
+        }
+
+        // Quest 1's birthday ("DD / MM / YYYY", birthday.ts) and gender (q1-tea.ts) pre-fill the Profile once.
+        if (slug == WhoDis)
+        {
+            var gender = AnswersJson.ReadString(request.Values, "gender") is { Length: > 0 } key and not "self-describe" ? ProfileFormat.ParseGender(key) : (Gender?)null;
+            var birthday = DateOnly.TryParseExact(AnswersJson.ReadString(request.Values, "birthday") ?? string.Empty, "dd / MM / yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date) && date <= DateOnly.FromDateTime(now)
+                ? date
+                : (DateOnly?)null;
+            learner.SeedFromQuest(gender, birthday, now);
         }
 
         // BR-100: +20 the first time a step of the quest in progress is done. BR-101: an all-optional step pays only

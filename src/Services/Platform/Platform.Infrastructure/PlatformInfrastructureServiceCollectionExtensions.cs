@@ -47,6 +47,7 @@ public static class PlatformInfrastructureServiceCollectionExtensions
 
         services.AddSkillMuniMessaging<PlatformDbContext>();
         services.AddSkillMuniEventConsumer<PlatformDbContext>();
+        services.AddErasureTombstones<PlatformDbContext>();
         services.AddIntegrationEventHandler<LearnerErased, LearnerErasedHandler>(LearnerErased.Name);
         services.AddIntegrationEventHandler<BadgeEarned, BadgeEarnedHandler>(BadgeEarned.Name);
 

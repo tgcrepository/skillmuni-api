@@ -18,7 +18,7 @@ public sealed record QuizSubmitted(
     string CourseSlug,
     int Correct,
     int Total,
-    bool FirstAttempt) : IntegrationEvent
+    bool FirstAttempt) : IntegrationEvent, ILearnerEvent
 {
     public const string Name = "learning.quiz.submitted";
 
@@ -30,7 +30,7 @@ public sealed record QuizSubmitted(
 /// score). Sent once per learner and brief, so <c>FirstCompletion</c> is always true; the field stays for the contract.
 /// </summary>
 public sealed record BriefCompleted(Guid LearnerId, string BriefId, string ModuleSlug, string CourseSlug, bool FirstCompletion)
-    : IntegrationEvent
+    : IntegrationEvent, ILearnerEvent
 {
     public const string Name = "learning.brief.completed";
 
@@ -38,7 +38,7 @@ public sealed record BriefCompleted(Guid LearnerId, string BriefId, string Modul
 }
 
 /// <summary>Every brief of a topic (event "module") completed. Sent once.</summary>
-public sealed record ModuleCompleted(Guid LearnerId, string ModuleSlug, string CourseSlug) : IntegrationEvent
+public sealed record ModuleCompleted(Guid LearnerId, string ModuleSlug, string CourseSlug) : IntegrationEvent, ILearnerEvent
 {
     public const string Name = "learning.module.completed";
 
@@ -46,7 +46,7 @@ public sealed record ModuleCompleted(Guid LearnerId, string ModuleSlug, string C
 }
 
 /// <summary>Every brief of every topic of an app module (event "course") completed. Sent once.</summary>
-public sealed record CourseCompleted(Guid LearnerId, string CourseSlug) : IntegrationEvent
+public sealed record CourseCompleted(Guid LearnerId, string CourseSlug) : IntegrationEvent, ILearnerEvent
 {
     public const string Name = "learning.course.completed";
 
@@ -54,7 +54,7 @@ public sealed record CourseCompleted(Guid LearnerId, string CourseSlug) : Integr
 }
 
 /// <summary>MISS-04: minutes spent learning, as the app reports them (after the daily cap).</summary>
-public sealed record ActivityRecorded(Guid LearnerId, int Minutes) : IntegrationEvent
+public sealed record ActivityRecorded(Guid LearnerId, int Minutes) : IntegrationEvent, ILearnerEvent
 {
     public const string Name = "learning.activity.recorded";
 
@@ -62,7 +62,7 @@ public sealed record ActivityRecorded(Guid LearnerId, int Minutes) : Integration
 }
 
 /// <summary>BR-107: the Lobby first-moves bonus collected. Gamification credits +50 once (key <c>first-moves:once</c>).</summary>
-public sealed record FirstMovesClaimed(Guid LearnerId) : IntegrationEvent
+public sealed record FirstMovesClaimed(Guid LearnerId) : IntegrationEvent, ILearnerEvent
 {
     public const string Name = "learning.first-moves.claimed";
 
@@ -80,7 +80,7 @@ public sealed record AccountErased(Guid AccountId) : IntegrationEvent
 }
 
 /// <summary>From Assessment: Career Drivers submitted; the first move "Discover your Career Drivers" is done (BR-42).</summary>
-public sealed record AssessmentSubmitted(Guid LearnerId) : IntegrationEvent
+public sealed record AssessmentSubmitted(Guid LearnerId) : IntegrationEvent, ILearnerEvent
 {
     public const string Name = "assessment.attempt.submitted";
 

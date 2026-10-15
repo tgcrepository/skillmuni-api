@@ -53,9 +53,16 @@ public sealed class CvEndpointsTests(CvApiFactory api)
         var status = await WaitAsync(client, cvId);
         Assert.Equal(("done", 100), (status.GetProperty("state").GetString(), status.GetProperty("percent").GetInt32()));
 
+        // cv.api.ts: `outcome?` and `detail?` are optional, so a clean parse leaves them out (never null).
+        Assert.False(status.TryGetProperty("outcome", out _));
+        Assert.False(status.TryGetProperty("detail", out _));
+
         var summary = await (await client.GetAsync($"/api/v1/cv/{cvId}/summary")).JsonAsync(HttpStatusCode.OK);
         Assert.Equal(5, summary.GetProperty("questsPrefilled").GetInt32());
         Assert.Equal("Your name", summary.GetProperty("sections")[0].GetProperty("title").GetString());
+        var fields = summary.GetProperty("sections").EnumerateArray().SelectMany(s => s.GetProperty("fields").EnumerateArray()).ToList();
+        Assert.DoesNotContain(fields, f => f.TryGetProperty("check", out var check) && check.ValueKind == JsonValueKind.Null);
+        Assert.DoesNotContain(summary.GetProperty("sections").EnumerateArray(), s => s.TryGetProperty("chips", out var chips) && chips.ValueKind == JsonValueKind.Null);
 
         var stored = await api.QueryAsync(db => db.Documents.AsNoTracking().SingleAsync(d => d.LearnerId == learnerId));
         Assert.DoesNotContain("14/05/2003", stored.ExtractJson, StringComparison.Ordinal);

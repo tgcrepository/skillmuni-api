@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using SkillMuni.Common.Results;
 using SkillMuni.Web.Correlation;
 
 namespace SkillMuni.Web.Errors;
@@ -21,6 +22,14 @@ public sealed class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logge
         if (exception is BadHttpRequestException bad)
         {
             var problem = ApiProblems.Create(httpContext, bad.StatusCode, "malformed-request", "The request could not be read.");
+            await ApiProblems.WriteAsync(httpContext, problem, cancellationToken);
+            return true;
+        }
+
+        if (exception is DependencyUnavailableException unavailable)
+        {
+            logger.LogWarning(exception, "Dependency unavailable {Code} {CorrelationId}", unavailable.Code, CorrelationIdMiddleware.Get(httpContext));
+            var problem = ApiProblems.Create(httpContext, StatusCodes.Status503ServiceUnavailable, unavailable.Code, unavailable.UserMessage);
             await ApiProblems.WriteAsync(httpContext, problem, cancellationToken);
             return true;
         }

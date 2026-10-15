@@ -3,6 +3,7 @@ using Azure.Messaging.ServiceBus;
 using Identity.Application.Abstractions;
 using Microsoft.Extensions.Logging;
 using SkillMuni.Common.Privacy;
+using SkillMuni.Common.Results;
 
 namespace Identity.Infrastructure.Notifications;
 
@@ -14,7 +15,7 @@ public sealed class ServiceBusNotificationSender(ServiceBusSender sender) : INot
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
-    public Task SendAsync(CodeNotification notification, CancellationToken cancellationToken)
+    public async Task SendAsync(CodeNotification notification, CancellationToken cancellationToken)
     {
         var body = new
         {
@@ -30,7 +31,18 @@ public sealed class ServiceBusNotificationSender(ServiceBusSender sender) : INot
             Subject = notification.Template,
             TimeToLive = TimeSpan.FromMinutes(Math.Max(1, notification.ValidForMinutes)),
         };
-        return sender.SendMessageAsync(message, cancellationToken);
+        try
+        {
+            await sender.SendMessageAsync(message, cancellationToken);
+        }
+        catch (ServiceBusException e)
+        {
+            // The SDK has already retried. Answer 503 (not 500) so the app can say "try again in a minute".
+            throw new DependencyUnavailableException(
+                "notifications-unavailable",
+                "We couldn't send your code right now. Please try again in a minute.",
+                e);
+        }
     }
 
     public ValueTask DisposeAsync() => sender.DisposeAsync();

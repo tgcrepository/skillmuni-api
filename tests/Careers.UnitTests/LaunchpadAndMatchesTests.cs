@@ -159,5 +159,6 @@ public sealed class LaunchpadAndMatchesTests
         Assert.Empty(_h.Store.CvFiles);
         Assert.Empty(_h.Store.SavedJobs);
         Assert.False(_h.Store.Blobs.ContainsKey(cv.BlobName));
+        Assert.Contains(_h.Me, _h.Tombstones.Erased);
     }
 }

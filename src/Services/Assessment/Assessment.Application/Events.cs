@@ -8,7 +8,7 @@ namespace Assessment.Application;
 /// Islands 1–3: the island's 9th pair was answered (BR-104). Once per island per attempt. Gamification pays +25 only
 /// when <see cref="FirstAttempt"/>, key <c>assessment:island:{n}</c>.
 /// </summary>
-public sealed record IslandCleared(Guid LearnerId, int Attempt, int Island, bool FirstAttempt) : IntegrationEvent
+public sealed record IslandCleared(Guid LearnerId, int Attempt, int Island, bool FirstAttempt) : IntegrationEvent, ILearnerEvent
 {
     public const string Name = "assessment.island.cleared";
 
@@ -28,7 +28,7 @@ public sealed record AttemptSubmitted(
     string ArchetypeEmoji,
     string ArchetypeSummary,
     IReadOnlyList<string> TopDrivers,
-    IReadOnlyList<string> TopDriverIds) : IntegrationEvent
+    IReadOnlyList<string> TopDriverIds) : IntegrationEvent, ILearnerEvent
 {
     public const string Name = "assessment.attempt.submitted";
 
@@ -37,11 +37,13 @@ public sealed record AttemptSubmitted(
 
 // ---- Consumed (Assessment's own copies; publisher field names) ----
 
-public sealed record AccountRegistered(Guid AccountId, string FirstName, string LastName, string Market) : IntegrationEvent
+public sealed record AccountRegistered(Guid AccountId, string FirstName, string LastName, string Market) : IntegrationEvent, ILearnerEvent
 {
     public const string Name = "identity.learner.registered";
 
     public override string EventType => Name;
+
+    Guid ILearnerEvent.LearnerId => AccountId;
 }
 
 public sealed record AccountErased(Guid AccountId) : IntegrationEvent

@@ -1,0 +1,123 @@
+name: e2e
+
+# Full regression: boots every service with docker compose (MySQL, Service Bus emulator, Redis, Azurite, gateway)
+# and drives the API like the Angular app does (tools/contract), checking every response against the frontend types.
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Local secrets
+        run: bash scripts/dev-setup.sh
+
+      - name: Build images
+        run: docker compose build --parallel 2>&1 | tail -40
+
+      - name: Start the stack
+        run: docker compose up -d
+
+      - name: Wait for the Service Bus emulator
+        run: |
+          # The emulator creates its topics and queues after the container starts; a request that publishes before
+          # then gets MessagingEntityNotFound (seen as 503 notifications-unavailable on sign-up). Not fatal here.
+          for i in $(seq 1 60); do
+            if docker compose logs servicebus 2>/dev/null | grep -q "Emulator Service is Successfully Up"; then
+              echo "Service Bus emulator up after $((i*5)) s"; exit 0
+            fi
+            sleep 5
+          done
+          echo "Service Bus emulator not confirmed up; continuing"; docker compose logs --no-color --tail=40 servicebus
+
+      - name: Wait for every service
+        run: |
+          # Probe each service's /health/ready from inside the compose network (the gateway answers 401 before proxying).
+          svcs="identity learner cv gamification assessment learning muni platform careers gateway"
+          net=$(docker network ls --format '{{.Name}}' | grep -m1 skillmuni)
+          docker run -d --name probe --network "$net" curlimages/curl:8.10.1 sleep 3600 >/dev/null
+          for i in $(seq 1 60); do
+            down=""
+            for s in $svcs; do
+              code=$(docker exec probe curl -s -m 3 -o /dev/null -w '%{http_code}' "http://$s:8080/health/ready" 2>/dev/null || echo 000)
+              [ "$code" = "200" ] || down="$down $s($code)"
+            done
+            [ -z "$down" ] && echo "all services ready after $((i*5)) s" && exit 0
+            echo "waiting:$down"
+            if docker compose ps -a --format '{{.Service}} {{.State}}' | grep -q '^mysql exited'; then echo "mysql exited"; break; fi
+            sleep 5
+          done
+          docker compose ps -a; docker compose logs --no-color --tail=80 mysql; exit 1
+
+      - name: Wait until codes can be sent
+        run: |
+          # Healthy services can still run ahead of the Service Bus emulator's queues: sign-up answers 503
+          # notifications-unavailable until the notifications queue takes messages.
+          for i in $(seq 1 45); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' -X POST http://localhost:5080/api/v1/auth/register \
+              -H 'Content-Type: application/json' \
+              -d "{\"firstName\":\"Probe\",\"lastName\":\"Ready\",\"email\":\"probe-$i-$RANDOM@example.com\",\"password\":\"Skillmuni123\",\"consent\":true}")
+            [ "$code" = "200" ] && echo "codes can be sent after $((i*2)) s" && exit 0
+            sleep 2
+          done
+          echo "sign-up still answers $code"
+
+      - name: Regression journeys
+        id: journeys
+        run: |
+          set -o pipefail
+          # The dev signing key from .env lets journeys mint an institute-admin token (claims) like Identity does.
+          export AUTH_PRIVATE_KEY_B64="$(grep '^AUTH_PRIVATE_KEY_B64=' .env | cut -d= -f2-)"
+          node tools/contract/run-contract.js http://localhost:5080 2>journeys.err | tee journeys.txt
+
+      - name: Collect logs
+        if: always()
+        run: |
+          docker compose ps -a > ps.txt 2>&1 || true
+          docker compose logs --no-color > compose.log 2>&1 || true
+          docker compose logs --no-color --tail=40 mysql > mysql.txt 2>&1 || true
+          for c in $(docker compose ps -a --format '{{.Service}} {{.State}} {{.ExitCode}}' | awk '$2!="running" || $3!="0" {print $1}'); do
+            echo "== $c (not running)"; docker compose logs --no-color --tail=40 "$c"
+          done > exited.txt 2>&1 || true
+          grep -E "fail:|crit:|Unhandled|Exception|error|failed \(delivery|before the learner exists" compose.log | grep -v -E "EndOfStream|BadHttpRequest|Connection refused|could not be found|ExceptionDispatcher|SocketException|Service Bus error on|last_error|sqledge-1|errorlog" | awk '!seen[$0]++' | head -150 > errors.txt || true
+
+      - name: Post results to the pull request
+        if: ${{ !cancelled() && github.event_name == 'pull_request' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          touch journeys.txt journeys.err ps.txt errors.txt
+          {
+            echo "### e2e regression (${GITHUB_SHA::7}): ${{ job.status }}"
+            echo '```'
+            head -c 30000 journeys.txt
+            echo '```'
+            echo "<details><summary>containers</summary>"; echo; echo '```'; cat ps.txt; echo '```'; echo "</details>"
+            echo "<details><summary>stopped containers</summary>"; echo; echo '```'; head -c 15000 exited.txt 2>/dev/null; echo '```'; echo "</details>"
+            echo "<details><summary>server errors (first 150)</summary>"; echo; echo '```'; head -c 20000 errors.txt; echo '```'; echo "</details>"
+          } > body.md
+          head -c 62000 body.md > body2.md
+          gh api repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments -F body=@body2.md > /dev/null
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-logs
+          path: |
+            compose.log
+            journeys.txt
+            journeys.err

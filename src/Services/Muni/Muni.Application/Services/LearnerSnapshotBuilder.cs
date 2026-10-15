@@ -15,8 +15,12 @@ public sealed class LearnerSnapshotBuilder(
 {
     public async Task<LearnerSnapshot> BuildAsync(LearnerRef who, CancellationToken cancellationToken)
     {
-        var known = await learners.FindAsync(who.Id, cancellationToken);
-        var progress = await profileProgress.GetAsync(who.Id, cancellationToken);
+        var found = await learners.FindAsync(who.Id, cancellationToken);
+        var erased = found is { IsErased: true };
+
+        // An erased learner's tombstone holds nothing personal; a token minted before the erasure gets defaults.
+        var known = erased ? null : found;
+        var progress = erased ? null : await profileProgress.GetAsync(who.Id, cancellationToken);
         var ladder = options.Value.Ladder();
 
         var first = FirstOf(known?.FirstName, who.FirstName);
@@ -49,7 +53,8 @@ public sealed class LearnerSnapshotBuilder(
             gaps,
             known?.Archetype,
             Streak: known?.StreakDays ?? 0,
-            known?.JoinedAt);
+            known?.JoinedAt,
+            erased);
     }
 
     internal static string FirstOf(string? fromEvents, string fromToken)

@@ -56,6 +56,11 @@ progress. Schema `gamification`. BRD §4 is the rulebook: an action not in §4.1
 - **Arena:** XP summed over the window from the ledger; ties go to whoever got there first; movement compares with
   the board at local midnight; "rank up" compares with the rank the learner saw last. League and promotion are
   placeholders (MISS-11); `rewards` is always `{ coins: 0, voucher: null }` (A-317).
+  Learners with no XP in the window rank after everyone who earned some (name order): the learner always sees
+  themself, and Batch / Friends list every member. `photo` is left out when a player has none (`photo?: string`).
+- **One XP total:** `me/progress`, Rewards (`player.xp`, `wallet.xp`) and the Arena all read the ledger. Event
+  handlers for one learner run in parallel, so `players` has an optimistic concurrency `version`: a handler that
+  lost the race fails and its event is redelivered, instead of overwriting totals, streak or badge counters.
 
 ## Events
 Publishes `gamification.xp.awarded` (totals; Learner copies them) and `gamification.badge.earned`.
@@ -77,3 +82,21 @@ Consumes (subscription `gamification`, filter in `deploy/bicep/main.bicep`): `id
 | `Gamification:Xp`, `Levels`, `Quests`, `DailyQuests`, `Arena`, `TimeZones`, `FoundingUntil`, `FeedbackXpEvery` | optional overrides |
 | `Gamification:Badges:AwardCatalogue` | `false` for launch (§4.3) |
 | `ServiceBus:Subscription` | `gamification` |
+| `ServiceBus:MaxConcurrentCalls` | `1`: one event at a time per replica, so two events for one learner never race on the player row (counters, totals, the feedback 30-day rule). Across replicas `players.version` is an optimistic concurrency token: the losing handler fails and its message is redelivered. |
+
+## Erasure tombstone (MISS-08)
+
+On `identity.learner.erased` the learner's rows are deleted and a tombstone stays in `erased_learners`
+(`learner_id`, `erased_at` — nothing else, no tenant, no personal data; shared building block
+`AddErasureTombstones<TContext>()`). An access token stays valid for up to 10 minutes after erasure, so:
+
+- every request from an erased account gets **410 `learner-erased`** (`ErasedAccountMiddleware`, SkillMuni.Web) instead
+  of recreating an empty row;
+- an event about an erased learner (any event implementing `ILearnerEvent`) delivered late is recorded in the inbox and
+  skipped.
+
+## Arena "last seen rank"
+
+`GET arena` remembers the rank the learner saw (for "You passed X"). It is written as one single-column `UPDATE`
+outside the player's unit of work: it neither checks nor moves the `players.version` concurrency token, so a
+concurrent event updating the same player can't make the read fail.

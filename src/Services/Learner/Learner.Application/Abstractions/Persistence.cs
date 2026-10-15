@@ -29,6 +29,12 @@ public interface IQuestAnswersRepository
     Task<DateTime?> LastUpdatedAsync(Guid learnerId, CancellationToken cancellationToken);
 
     void Add(QuestAnswers answers);
+
+    /// <summary>
+    /// The learner's row for this quest (tracked), inserting <paramref name="candidate"/> first when there is none.
+    /// Safe when a request and a CV pre-fill create it at once: one insert wins, no duplicate-key error.
+    /// </summary>
+    Task<QuestAnswers> GetOrCreateAsync(QuestAnswers candidate, CancellationToken cancellationToken);
 }
 
 public interface IDraftRepository
@@ -58,6 +64,9 @@ public interface IEnrolmentRepository
 {
     Task<bool> ExistsAsync(Guid learnerId, string programmeCode, CancellationToken cancellationToken);
 
+    /// <summary>Whether the learner has joined any programme (BR-113 pays once per learner).</summary>
+    Task<bool> AnyAsync(Guid learnerId, CancellationToken cancellationToken);
+
     void Add(Enrolment enrolment);
 }
 
@@ -74,6 +83,12 @@ public interface IJobProfileRepository
     Task<JobProfileSettings?> FindAsync(Guid learnerId, CancellationToken cancellationToken);
 
     void Add(JobProfileSettings settings);
+
+    /// <summary>
+    /// The learner's row (tracked), inserting <paramref name="candidate"/> first when there is none. Safe when two
+    /// handlers or requests create it at once: one insert wins and both get the same row (no duplicate-key error).
+    /// </summary>
+    Task<JobProfileSettings> GetOrCreateAsync(JobProfileSettings candidate, CancellationToken cancellationToken);
 }
 
 public interface ITrophyFileRepository

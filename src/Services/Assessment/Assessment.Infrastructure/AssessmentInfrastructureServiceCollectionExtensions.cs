@@ -35,6 +35,7 @@ public static class AssessmentInfrastructureServiceCollectionExtensions
 
         services.AddSkillMuniMessaging<AssessmentDbContext>();
         services.AddSkillMuniEventConsumer<AssessmentDbContext>();
+        services.AddErasureTombstones<AssessmentDbContext>();
         services.AddIntegrationEventHandler<AccountRegistered, AccountRegisteredHandler>(AccountRegistered.Name);
         services.AddIntegrationEventHandler<AccountErased, AccountErasedHandler>(AccountErased.Name);
         return services;

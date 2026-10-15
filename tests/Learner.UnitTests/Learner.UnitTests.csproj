@@ -12,6 +12,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Services\Learner\Learner.Application\Learner.Application.csproj" />
+    <ProjectReference Include="..\SkillMuni.Testing\SkillMuni.Testing.csproj" />
     <ProjectReference Include="..\..\src\Services\Learner\Learner.Infrastructure\Learner.Infrastructure.csproj" />
   </ItemGroup>
   <ItemGroup>

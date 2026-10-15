@@ -77,6 +77,9 @@ public sealed class GamificationEndpointsTests(GamificationApiFactory api)
         Assert.True(leaderRow.GetProperty("rank").GetInt32() < myRow.GetProperty("rank").GetInt32());
         Assert.Equal(myRow.GetProperty("rank").GetInt32(), board.GetProperty("me").GetProperty("rank").GetInt32());
         Assert.False(board.TryGetProperty("streakBonus", out _));
+
+        // arena.api.ts `photo?: string`: left out, never null, when the player has no photo.
+        Assert.False(myRow.TryGetProperty("photo", out _));
         Assert.Equal(0, board.GetProperty("rewards").GetProperty("coins").GetInt32());
         Assert.Equal(JsonValueKind.Null, board.GetProperty("rewards").GetProperty("voucher").ValueKind);
 
@@ -150,6 +153,31 @@ public sealed class GamificationEndpointsTests(GamificationApiFactory api)
         var db = scope.ServiceProvider.GetRequiredService<GamificationDbContext>();
         Assert.False(await db.Players.AnyAsync(p => p.Id == me));
         Assert.False(await db.XpEntries.AnyAsync(e => e.LearnerId == me));
+    }
+
+    [Fact]
+    public async Task Two_writers_of_one_player_cannot_lose_an_update()
+    {
+        // Events for one learner are handled in parallel; the second writer must fail (and its event be redelivered)
+        // instead of overwriting the first one's totals.
+        var me = await api.JoinAsync("Yash", "Pohare");
+        await using var first = api.Services.CreateAsyncScope();
+        await using var second = api.Services.CreateAsyncScope();
+        first.ServiceProvider.GetRequiredService<TenantOverride>().Set(TestTokens.Tenant);
+        second.ServiceProvider.GetRequiredService<TenantOverride>().Set(TestTokens.Tenant);
+        var db1 = first.ServiceProvider.GetRequiredService<GamificationDbContext>();
+        var db2 = second.ServiceProvider.GetRequiredService<GamificationDbContext>();
+        var p1 = await db1.Players.SingleAsync(p => p.Id == me);
+        var p2 = await db2.Players.SingleAsync(p => p.Id == me);
+
+        p1.AddXp(10, DateTime.UtcNow);
+        await db1.SaveChangesAsync();
+        p2.AddXp(5, DateTime.UtcNow);
+        await Assert.ThrowsAsync<DbUpdateConcurrencyException>(() => db2.SaveChangesAsync());
+
+        await using var check = api.Services.CreateAsyncScope();
+        check.ServiceProvider.GetRequiredService<TenantOverride>().Set(TestTokens.Tenant);
+        Assert.Equal(10, (await check.ServiceProvider.GetRequiredService<GamificationDbContext>().Players.AsNoTracking().SingleAsync(p => p.Id == me)).TotalXp);
     }
 
     [Fact]

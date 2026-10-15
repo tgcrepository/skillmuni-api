@@ -52,7 +52,7 @@ public sealed partial class ProgrammeService(
             return LearnerErrors.TooManyTries;
         }
 
-        var programme = await programmes.FindAsync(Normalize(code), cancellationToken);
+        var programme = await FindAsync(code, cancellationToken);
         if (programme is null)
         {
             learner.RecordWrongProgrammeCode(now, options.Value.ProgrammeTries, options.Value.ProgrammeCoolDown);
@@ -88,7 +88,7 @@ public sealed partial class ProgrammeService(
 
     public async Task<Result<ProgrammeResultDto>> SubmitAsync(LearnerRef who, ProgrammeSubmission submission, CancellationToken cancellationToken)
     {
-        var programme = await programmes.FindAsync(Normalize(submission.Code), cancellationToken);
+        var programme = await FindAsync(submission.Code, cancellationToken);
         if (programme is null)
         {
             return LearnerErrors.ProgrammeNotFound;
@@ -99,6 +99,9 @@ public sealed partial class ProgrammeService(
         {
             return LearnerErrors.AlreadyEnrolled;
         }
+
+        // BR-113: +100 once per learner, whatever the code; a second programme pays 0.
+        var firstProgramme = !await enrolments.AnyAsync(who.Id, cancellationToken);
 
         var english = int.Parse(submission.English, CultureInfo.InvariantCulture);
         var maths = int.Parse(submission.Maths, CultureInfo.InvariantCulture);
@@ -140,7 +143,7 @@ public sealed partial class ProgrammeService(
         }
 
         enrolments.Add(enrolment);
-        var earned = options.Value.Xp.Programme;
+        var earned = firstProgramme ? options.Value.Xp.Programme : 0;
         learner.RecordAwardedXp(earned, now);
         outbox.Add(new ProgrammeEnrolled(who.Id, programme.Code, programme.PaysStipend) { TenantId = tenant.TenantId });
         await unitOfWork.SaveChangesAsync(cancellationToken);
@@ -172,6 +175,42 @@ public sealed partial class ProgrammeService(
             request.Eligibility.Trim());
         await unitOfWork.SaveChangesAsync(cancellationToken);
         return ToDto(programme);
+    }
+
+    /// <summary>
+    /// A tenant's own code, else a configured sample code, which is stored for the tenant on first use so enrolments and
+    /// the admin screen see one row.
+    /// </summary>
+    private async Task<Programme?> FindAsync(string code, CancellationToken cancellationToken)
+    {
+        var normalized = Normalize(code);
+        var programme = await programmes.FindAsync(normalized, cancellationToken);
+        if (programme is not null)
+        {
+            return programme;
+        }
+
+        var sample = options.Value.SampleProgrammes.FirstOrDefault(p => Normalize(p.Code) == normalized);
+        if (sample is null)
+        {
+            return null;
+        }
+
+        programme = Programme.Create(tenant.TenantId, normalized);
+        programme.Describe(
+            sample.Name,
+            sample.Partner,
+            sample.Centre,
+            sample.BatchStarts,
+            sample.Duration,
+            sample.Stipend,
+            sample.MarksFrom,
+            sample.MinEnglish,
+            sample.MinMaths,
+            sample.Eligibility);
+        programmes.Add(programme);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+        return programme;
     }
 
     /// <summary>A Class 12 rule isn't met by Class 10 marks; otherwise both minimums must be reached.</summary>

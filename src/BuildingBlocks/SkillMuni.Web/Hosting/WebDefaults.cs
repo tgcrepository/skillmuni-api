@@ -14,6 +14,7 @@ using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using SkillMuni.Common.Tenancy;
+using SkillMuni.Web.Auth;
 using SkillMuni.Web.Caching;
 using SkillMuni.Web.Correlation;
 using SkillMuni.Web.Errors;
@@ -90,6 +91,7 @@ public static class WebDefaults
     public static WebApplication UseSkillMuniServiceDefaults(this WebApplication app)
     {
         app.UseExceptionHandler();
+        app.UseSkillMuniStatusCodePages();
         app.UseMiddleware<CorrelationIdMiddleware>();
 
         // Each service publishes /openapi/v1.json; the gateway serves them together (development only).
@@ -100,11 +102,16 @@ public static class WebDefaults
 
         app.UseAuthentication();
         app.UseMiddleware<TenantGuardMiddleware>();
+        app.UseMiddleware<ErasedAccountMiddleware>();
         app.UseAuthorization();
         app.MapSkillMuniHealth();
         app.MapControllers();
         return app;
     }
+
+    /// <summary>Empty error responses (unknown route, wrong verb…) become the same problem+json as every other error.</summary>
+    public static IApplicationBuilder UseSkillMuniStatusCodePages(this IApplicationBuilder app) =>
+        app.UseStatusCodePages(static context => ApiProblems.WriteStatusAsync(context.HttpContext, context.HttpContext.RequestAborted));
 
     /// <summary><c>/health/live</c> (process up) and <c>/health/ready</c> (dependencies tagged "ready").</summary>
     public static IEndpointRouteBuilder MapSkillMuniHealth(this IEndpointRouteBuilder endpoints)

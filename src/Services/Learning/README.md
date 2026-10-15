@@ -70,3 +70,20 @@ None. Rows hold the learner id, content ids, scores, bookmarks, ratings, minutes
 - The assessment first move always shows "36 quick this-or-that picks · 6 min" (no "N of 36 picked" until Assessment
   publishes progress).
 - The app doesn't call `POST learn/activity` yet (MISS-04).
+
+## Erasure tombstone (MISS-08)
+
+On `identity.learner.erased` the learner's rows are deleted and a tombstone stays in `erased_learners`
+(`learner_id`, `erased_at` — nothing else, no tenant, no personal data; shared building block
+`AddErasureTombstones<TContext>()`). An access token stays valid for up to 10 minutes after erasure, so:
+
+- every request from an erased account gets **410 `learner-erased`** (`ErasedAccountMiddleware`, SkillMuni.Web) instead
+  of recreating an empty row;
+- an event about an erased learner (any event implementing `ILearnerEvent`) delivered late is recorded in the inbox and
+  skipped.
+
+## Lobby state row
+
+`lobby_states` holds one row per learner (`ux_lobby_states_learner`), created on first use by the Home lobby request or
+by `assessment.attempt.submitted`. The create is an insert-if-absent (`INSERT … ON DUPLICATE KEY UPDATE`) followed by a
+read, so both arriving together never hit the unique key.

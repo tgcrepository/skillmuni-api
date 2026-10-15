@@ -11,6 +11,7 @@ using SkillMuni.Web.Hosting;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.AddSkillMuniPlatform("gateway");
+builder.WebHost.ConfigureKestrel(o => o.AddServerHeader = false);
 
 var services = builder.Services;
 services.AddOptions<GatewayOptions>().BindConfiguration(GatewayOptions.Section);
@@ -59,13 +60,18 @@ services.AddHttpClient<IdentitySessionClient>((sp, http) =>
 var app = builder.Build();
 
 app.UseForwardedHeaders();
+app.UseMiddleware<SecurityHeadersMiddleware>();
 app.UseExceptionHandler();
+
+// Anything no route matches (unknown paths, /internal/…, other versions) gets a 404 the app can read.
+app.UseSkillMuniStatusCodePages();
 app.UseMiddleware<CorrelationIdMiddleware>();
 app.UseCors();
 app.UseRateLimiter();
 app.UseMiddleware<TenantResolutionMiddleware>();
 app.UseMiddleware<SessionRefreshMiddleware>();
 app.UseAuthentication();
+app.UseMiddleware<AccountRateLimitMiddleware>();
 app.UseAuthorization();
 
 if (app.Environment.IsDevelopment())

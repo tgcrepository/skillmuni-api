@@ -67,7 +67,13 @@ public sealed class AssessmentSubmittedHandler(MuniLearnerAccessor accessor, Tim
     }
 }
 
-public sealed class LearnerErasedHandler(IMuniDataEraser eraser) : IIntegrationEventHandler<LearnerErased>
+/// <summary>MISS-08: chat lines and ratings go; the learner row stays as a blank tombstone that ignores later events.</summary>
+public sealed class LearnerErasedHandler(IMuniDataEraser eraser, MuniLearnerAccessor accessor, TimeProvider clock) : IIntegrationEventHandler<LearnerErased>
 {
-    public Task HandleAsync(LearnerErased e, CancellationToken cancellationToken) => eraser.EraseAsync(e.AccountId, cancellationToken);
+    public async Task HandleAsync(LearnerErased e, CancellationToken cancellationToken)
+    {
+        await eraser.EraseAsync(e.AccountId, cancellationToken);
+        var learner = await accessor.GetOrCreateAsync(e.AccountId, cancellationToken);
+        learner.Erase(clock.GetUtcNow().UtcDateTime);
+    }
 }

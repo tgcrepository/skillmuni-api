@@ -18,6 +18,12 @@ public interface IPlayerRepository
     Task<int> CountAsync(CancellationToken cancellationToken);
 
     void Add(Player player);
+
+    /// <summary>
+    /// Stores the Arena rank the learner just saw ("You passed X" next time). Written on its own, outside the
+    /// player's unit of work, so a GET of the Arena never fails on a concurrent event updating the same player.
+    /// </summary>
+    Task RememberSeenRankAsync(Guid learnerId, int rank, CancellationToken cancellationToken);
 }
 
 public interface IXpLedger
@@ -83,6 +89,9 @@ public interface IBoardQueries
 
     /// <summary>The learner's row and 1-based rank, or null when they earned nothing in the window.</summary>
     Task<(BoardRow Row, int Rank)?> RankOfAsync(Guid learnerId, DateTime? since, IReadOnlyCollection<Guid>? only, CancellationToken cancellationToken);
+
+    /// <summary>How many learners earned XP in the window.</summary>
+    Task<int> CountAsync(DateTime? since, IReadOnlyCollection<Guid>? only, CancellationToken cancellationToken);
 }
 
 /// <summary>MISS-08 erasure: every row this service holds for one learner. Safe to run twice.</summary>

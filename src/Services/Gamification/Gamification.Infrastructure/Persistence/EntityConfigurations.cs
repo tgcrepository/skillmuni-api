@@ -43,7 +43,10 @@ internal sealed class PlayerConfiguration : IEntityTypeConfiguration<Player>
         b.Property(e => e.ShowcaseJson).HasColumnName("showcase").HasColumnType("json").IsRequired();
         b.Property(e => e.CountersJson).HasColumnName("counters").HasColumnType("json").IsRequired();
         b.Property(e => e.JoinedAt).HasColumnName("joined_at");
+        // Optimistic concurrency (players.version): two events for one learner handled at once must not overwrite each
+        // other's counters and totals. The loser fails, is retried and re-reads the player.
         b.Property(e => e.UpdatedAt).HasColumnName("updated_at");
+        b.Property(e => e.Version).HasColumnName("version").IsConcurrencyToken();
 
         b.HasIndex(e => new { e.TenantId, e.Batch }).HasDatabaseName("ix_players_batch");
     }

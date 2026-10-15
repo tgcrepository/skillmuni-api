@@ -49,7 +49,10 @@ public sealed class StatsService(
     {
         var player = await PlayerOrNewAsync(learnerId, cancellationToken);
         var today = engine.Today(player);
-        var level = engine.LevelFor(player.TotalXp);
+
+        // One XP total everywhere (BR-138): the ledger, as me/progress shows it.
+        var xp = await ledger.TotalAsync(learnerId, cancellationToken);
+        var level = engine.LevelFor(xp);
 
         int? batchRank = null;
         if (player.Batch is { } batch)
@@ -88,9 +91,9 @@ public sealed class StatsService(
         var days = await activity.ListDaysAsync(learnerId, monday, monday.AddDays(6), cancellationToken);
 
         return new RewardsDashboardDto(
-            new RewardsPlayerDto(player.Name, player.Initials, level.Rank, player.PhotoUrl, level.Level, player.TotalXp, level.Target, batchRank),
+            new RewardsPlayerDto(player.Name, player.Initials, level.Rank, player.PhotoUrl, level.Level, xp, level.Target, batchRank),
             new StreakDto(player.CurrentStreak(today), PlayerViews.Week(today, days)),
-            new WalletDto(player.TotalXp),
+            new WalletDto(xp),
             await DailyAsync(player, today, cancellationToken),
             new RewardsBadgesDto(catalogue.Earned, catalogue.Total, slots, upNext),
             rank,

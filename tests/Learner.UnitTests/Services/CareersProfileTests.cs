@@ -32,18 +32,27 @@ public sealed class CareersProfileTests
         {
             skills = new object[]
             {
-                new { id = "data-entry", name = "Data entry", level = 3 },
-                new { id = "excel", name = "MS Excel", level = 2 },
-                new { id = "typing", name = "Typing", level = 2 },
-                new { id = "zoho", name = "Zoho CRM", level = 1 },
+                new { id = "data-entry", name = "Data entry", category = "data", level = 3, source = "suggested" },
+                new { id = "excel", name = "MS Excel", category = "business", level = 2, source = "search" },
+                new { id = "typing", name = "Typing", category = "data", level = 2, source = "custom" },
+                new { id = "zoho", name = "Zoho CRM", category = "business", level = 1, source = "suggested" },
             },
             trophies = new object[]
             {
-                new { name = "NSDC data capturing", source = "digilocker", skills = new[] { "data-entry" } },
-                new { name = "Udemy Excel", skills = new[] { "MS Excel" } },
+                new { id = "t1", name = "NSDC data capturing", source = "digilocker", verified = true, linkedSkills = new[] { "data-entry" } },
+                new { id = "t2", name = "Udemy Excel", source = "manual", verified = false, linkedSkills = new[] { "excel" } },
+                new { id = "t3", name = "Zoho basics", source = "manual", verified = false, linkedSkills = new[] { "zoho" } },
             },
         });
-        await SaveAsync(who, "drop-the-receipts", new { receipts = new object[] { new { skill = "Typing", status = "verified" }, new { skill = "Zoho CRM", status = "checking" } } });
+        await SaveAsync(who, "work-lore", new { chapters = new[] { new { id = "c1", role = "Data entry operator", company = "Infosys BPM", skills = new[] { "typing" } } } });
+        await SaveAsync(who, "drop-the-receipts", new
+        {
+            receipts = new Dictionary<string, object>
+            {
+                ["ch-c1"] = new { status = "verified", fileName = "letter.pdf", at = "15 Oct 2026" },
+                ["tr-t3"] = new { status = "checking", fileName = "zoho.pdf", at = "15 Oct 2026" },
+            },
+        });
 
         var profile = (await Service.GetAsync(who.Id, _ct)).Value;
 
@@ -69,10 +78,10 @@ public sealed class CareersProfileTests
         Assert.Empty(bare.Skills);
 
         _h.Learner(who).SetVerifiedContact("+919123456789", null, _h.Clock.GetUtcNow().UtcDateTime);
-        await SaveAsync(who, "pick-your-arc", new { relocate = false, where = new[] { "relocate" } });
+        await SaveAsync(who, "pick-your-arc", new { where = new[] { "relocate" } });
         var verified = (await Service.GetAsync(who.Id, _ct)).Value;
         Assert.Equal("•••••• 6789", verified.Contact);
-        Assert.False(verified.Relocate);
+        Assert.True(verified.Relocate);
     }
 
     [Fact]

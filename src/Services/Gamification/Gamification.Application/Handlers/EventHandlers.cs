@@ -2,6 +2,7 @@ using Gamification.Application.Rules;
 using Gamification.Application.Services;
 using Microsoft.Extensions.Options;
 using SkillMuni.Common.Messaging;
+using SkillMuni.Common.Privacy;
 
 namespace Gamification.Application.Handlers;
 
@@ -19,9 +20,14 @@ public sealed class AccountRegisteredHandler(IGameEngine engine, TimeProvider cl
     }
 }
 
-public sealed class AccountErasedHandler(IPlayerDataEraser eraser) : IIntegrationEventHandler<AccountErased>
+/// <summary>MISS-08: every row for the player goes; a tombstone stops a later request or event recreating the player.</summary>
+public sealed class AccountErasedHandler(IPlayerDataEraser eraser, IErasureTombstones tombstones) : IIntegrationEventHandler<AccountErased>
 {
-    public Task HandleAsync(AccountErased e, CancellationToken cancellationToken) => eraser.EraseAsync(e.AccountId, cancellationToken);
+    public async Task HandleAsync(AccountErased e, CancellationToken cancellationToken)
+    {
+        await eraser.EraseAsync(e.AccountId, cancellationToken);
+        await tombstones.MarkErasedAsync(e.AccountId, cancellationToken);
+    }
 }
 
 /// <summary>

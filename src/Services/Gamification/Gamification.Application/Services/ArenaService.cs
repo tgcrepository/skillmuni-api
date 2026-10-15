@@ -74,6 +74,26 @@ public sealed class ArenaService(
             ranked.Add(mine);
         }
 
+        // Players with no XP in the window aren't in the ledger query. The learner always sees themself (arena.api.ts
+        // `me`: "even when they're far down the list"), and the Batch and Friends tabs list every member: they rank
+        // after everyone who earned XP, in name order.
+        var unranked = (only ?? new[] { learnerId }).Where(id => ranked.All(r => r.Row.LearnerId != id)).Distinct().ToList();
+        if (unranked.Count > 0)
+        {
+            var earners = top.Count < arena.BoardSize ? top.Count : await boards.CountAsync(since, only, cancellationToken);
+            var members = await players.GetManyAsync(unranked, cancellationToken);
+            var zero = unranked
+                .Where(id => id == learnerId || members.ContainsKey(id))
+                .OrderBy(id => members.GetValueOrDefault(id)?.Name ?? me.Name, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(id => id)
+                .Select((id, i) => (Row: new BoardRow(id, 0, DateTime.MaxValue), Rank: earners + i + 1))
+                .ToList();
+            foreach (var row in zero.Where(r => r.Row.LearnerId == learnerId || ranked.Count < arena.BoardSize))
+            {
+                ranked.Add(row);
+            }
+        }
+
         var people = await players.GetManyAsync(ranked.Select(r => r.Row.LearnerId).ToList(), cancellationToken);
         var cheeredSet = cheered.ToHashSet();
         var rows = ranked.Select(r =>
@@ -121,10 +141,10 @@ public sealed class ArenaService(
                 rankUp = new RankUpDto(you.Rank, PlayerViews.FirstName(passed.Name));
             }
 
+            // Its own single-column UPDATE: the read must never fail on a concurrent event saving this player.
             if (stored.LastSeenRank != you.Rank)
             {
-                stored.SawRank(you.Rank);
-                await unitOfWork.SaveChangesAsync(cancellationToken);
+                await players.RememberSeenRankAsync(learnerId, you.Rank, cancellationToken);
             }
         }
 

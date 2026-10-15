@@ -52,6 +52,12 @@ public sealed class GameStore :
 
     public void Add(Player player) => Players.Add(player);
 
+    public Task RememberSeenRankAsync(Guid learnerId, int rank, CancellationToken cancellationToken)
+    {
+        Players.FirstOrDefault(p => p.Id == learnerId)?.SawRank(rank);
+        return Task.CompletedTask;
+    }
+
     public Task<bool> ExistsAsync(Guid learnerId, string reason, string sourceId, CancellationToken cancellationToken) =>
         Task.FromResult(Ledger.Any(e => e.LearnerId == learnerId && e.Reason == reason && e.SourceId == sourceId));
 
@@ -109,6 +115,9 @@ public sealed class GameStore :
         var index = board.FindIndex(r => r.LearnerId == learnerId);
         return Task.FromResult<(BoardRow, int)?>(index < 0 ? null : (board[index], index + 1));
     }
+
+    public Task<int> CountAsync(DateTime? since, IReadOnlyCollection<Guid>? only, CancellationToken cancellationToken) =>
+        Task.FromResult(Board(since, null, only).Count);
 
     public Task EraseAsync(Guid learnerId, CancellationToken cancellationToken)
     {

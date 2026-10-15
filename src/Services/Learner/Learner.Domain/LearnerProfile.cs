@@ -205,6 +205,19 @@ public sealed class LearnerProfile : Entity
         return first;
     }
 
+    /// <summary>Quest 1 ("ID &amp; birthday", "The tea") fills the Profile's gender and birthday when they're still empty.</summary>
+    public void SeedFromQuest(Gender? gender, DateOnly? birthday, DateTime now)
+    {
+        if ((gender is null || Gender is not null) && (birthday is null || DateOfBirth is not null))
+        {
+            return;
+        }
+
+        Gender ??= gender;
+        DateOfBirth ??= birthday;
+        UpdatedAt = now;
+    }
+
     public void SetVerifiedBirthday(DateOnly birthday, DateTime now)
     {
         DateOfBirth ??= birthday;

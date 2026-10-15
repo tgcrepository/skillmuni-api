@@ -50,7 +50,9 @@ renders (A-262: one record built from the 8 quests, no second form).
   adds something: not `xp: false`, no `<key>Skipped: true`, and at least one non-empty value. Otherwise the step is
   published with `paid: false` and, being done, can never pay later.
 - **BR-119:** on `identity.claim.confirmed` quests 1–5 count as done and Learner publishes their step events (all paid)
-  and quest events, so Gamification credits the normal 550 XP and badges.
+  and quest events, so Gamification credits the normal 550 XP and badges. If it arrives before
+  `identity.learner.registered`, the learner is started from it and the registration event fills in name and contacts.
+- **BR-113:** the programme bonus pays +100 once per learner; a second programme enrols with `xpEarned: 0`.
 - **BR-110:** the first time every step is filled (a skipped optional step is not), Learner publishes
   `learner.job-profile.completed` once (`learners.job_profile_completed_at`).
 
@@ -62,6 +64,17 @@ renders (A-262: one record built from the 8 quests, no second form).
   certificates not on the trophy shelf (add), an email or mobile that differs from the verified one (keep).
 - `strength.jobMatches` is 0 and `pending` is empty: matching belongs to Careers, programme requirements aren't modelled.
 - The radar is the deck's skill levels per category scaled to the strongest; `archetype.strongest` is the top category.
+- Field names are the quest screens' own (`features/quests/parts/*.ts`, `data/*.ts`): signature moves = the deck's
+  first three skills with a level (q4-deck.ts order); `invitesBy` = "Email" (+ "WhatsApp" when Quest 2 opted in) while
+  Quest 8 `invites` is on, else "Invites off"; proofs come from Quest 7 `receipts`, an object keyed `edu`, `tl-<id>`,
+  `tr-<id>`, `ch-<id>` with `status` checking/verified (a verified or DigiLocker trophy is verified on its own);
+  timeline entries: school levels titled `<level> · <stream>` under their board, courses by `name`, other
+  qualifications (`level: "education"`) by `degree` or `qual` · `branch`; option labels from arc.ts (shifts, notice,
+  salary). LinkedIn on the CV contact comes from the latest CV read (the quests don't ask for it).
+- Careers profile (`internal/learners/{id}/careers-profile`): a deck skill is `verified` when linked (by skill id) from
+  a verified trophy's `linkedSkills` or a work chapter (`skills`) whose `ch-<id>` receipt is verified; `relocate` =
+  "relocate" in Pick Your Arc's `where`.
+- Quest 1's `birthday` ("DD / MM / YYYY") and `gender` fill the Profile's date of birth and gender while those are empty.
 
 ## Events
 Publishes: `learner.quest.step-completed` (`paid`), `learner.quest.completed`, `learner.profile.task-completed`,
@@ -91,8 +104,28 @@ Erasure (`identity.learner.erased`) deletes blobs, then every row.
 | `Learner:DigiLocker:Mode` | `off` · `sandbox` (Development/Testing only) |
 | `Learner:Quests`, `Learner:Levels`, `Learner:Xp`, `Learner:SkillOptions` | optional overrides of the code defaults |
 | `Learner:JobProfile:ShareBaseUrl`, `ExpiryChoices`, `MaxCvBytes` | share link base (`https://skillmuni.app`), 7/30/90, 5 MB |
+| `Learner:SampleProgrammes` | programme codes every tenant has, stored for the tenant on first lookup; empty in production, the two `programme.handlers.ts` codes in Development |
 | `ServiceBus:Subscription` | `learner` |
 
 Local `dotnet run` without compose: `dotnet user-secrets set Learner:Security:EncryptionKey "$(openssl rand -base64 32)"`.
 
 New migration: `dotnet ef migrations add <Name> --project src/Services/Learner/Learner.Infrastructure --startup-project src/Services/Learner/Learner.Api -o Persistence/Migrations`.
+
+## Erasure tombstone (MISS-08)
+
+On `identity.learner.erased` the learner's rows are deleted and a tombstone stays in `erased_learners`
+(`learner_id`, `erased_at` — nothing else, no tenant, no personal data; shared building block
+`AddErasureTombstones<TContext>()`). An access token stays valid for up to 10 minutes after erasure, so:
+
+- every request from an erased account gets **410 `learner-erased`** (`ErasedAccountMiddleware`, SkillMuni.Web) instead
+  of recreating an empty row;
+- an event about an erased learner (any event implementing `ILearnerEvent`) delivered late is recorded in the inbox and
+  skipped.
+
+## Job-profile row
+
+`job_profiles` has one row per learner (`ux_job_profiles_learner`), created on first use by a request or by
+`cv.parse.completed`. The create is an insert-if-absent (`INSERT … ON DUPLICATE KEY UPDATE`) followed by a read, so
+two parse results (or a parse result and a request) arriving together never hit the unique key. `quest_answers` rows
+(one per learner and quest, `ux_quest_answers_learner_slug`) are created the same way by quest saves, CV pre-fill and
+applied Job Profile changes.

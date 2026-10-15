@@ -3,6 +3,7 @@ using Assessment.Domain;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SkillMuni.Common.Tenancy;
+using SkillMuni.Messaging.Erasure;
 using SkillMuni.Messaging.Inbox;
 using SkillMuni.Messaging.Outbox;
 
@@ -43,6 +44,7 @@ public sealed class AssessmentDbContext : DbContext, IUnitOfWork
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AssessmentDbContext).Assembly);
         modelBuilder.AddOutbox();
         modelBuilder.AddInbox();
+        modelBuilder.AddErasureTombstones();
 
         modelBuilder.Entity<CareerJourney>().HasQueryFilter(e => e.TenantId == CurrentTenantId);
         modelBuilder.Entity<CareerAttempt>().HasQueryFilter(e => e.TenantId == CurrentTenantId);

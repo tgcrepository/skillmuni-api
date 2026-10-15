@@ -68,6 +68,17 @@ public sealed class LearnStore : IBriefProgressRepository, IQuizRepository, ILob
 
     public void Add(LobbyState state) => Lobby.Add(state);
 
+    public Task<LobbyState> GetOrCreateAsync(LobbyState candidate, CancellationToken cancellationToken)
+    {
+        var existing = Lobby.FirstOrDefault(s => s.LearnerId == candidate.LearnerId);
+        if (existing is null)
+        {
+            Lobby.Add(candidate);
+        }
+
+        return Task.FromResult(existing ?? candidate);
+    }
+
     public Task<ActivityDay?> GetAsync(Guid learnerId, DateOnly day, CancellationToken cancellationToken) =>
         Task.FromResult(Activity.FirstOrDefault(d => d.LearnerId == learnerId && d.Day == day));
 

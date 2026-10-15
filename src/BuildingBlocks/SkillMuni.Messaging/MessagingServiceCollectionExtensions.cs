@@ -2,6 +2,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SkillMuni.Common.Messaging;
+using SkillMuni.Common.Privacy;
+using SkillMuni.Messaging.Erasure;
 using SkillMuni.Messaging.Inbox;
 using SkillMuni.Messaging.Outbox;
 using SkillMuni.Messaging.Publishing;
@@ -39,6 +41,19 @@ public static class MessagingServiceCollectionExtensions
         services.AddSingleton<EventHandlerRegistry>();
         services.AddSingleton<IntegrationEventDispatcher<TContext>>();
         services.AddHostedService<ServiceBusEventConsumer<TContext>>();
+        return services;
+    }
+
+    /// <summary>
+    /// MISS-08 erasure tombstones on <typeparamref name="TContext"/> (map them with <c>modelBuilder.AddErasureTombstones()</c>).
+    /// Once registered, requests from an erased account get 410 <c>learner-erased</c> (SkillMuni.Web) and events
+    /// implementing <see cref="ILearnerEvent"/> for an erased learner are skipped.
+    /// </summary>
+    public static IServiceCollection AddErasureTombstones<TContext>(this IServiceCollection services)
+        where TContext : DbContext
+    {
+        services.AddSingleton<ErasedLearnerCache>();
+        services.AddScoped<IErasureTombstones, EfErasureTombstones<TContext>>();
         return services;
     }
 

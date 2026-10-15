@@ -1,6 +1,7 @@
 #!/bin/bash
 # One schema and one user per service (CLAUDE.md §6). Runs once, when the MySQL volume is first created.
-set -euo pipefail
+# Sourced by the MySQL entrypoint when not executable, so no `set -u` here (it would leak into the entrypoint).
+set -eo pipefail
 mysql -uroot -p"${MYSQL_ROOT_PASSWORD}" <<SQL
 CREATE DATABASE IF NOT EXISTS identity CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
 CREATE USER IF NOT EXISTS 'identity_svc'@'%' IDENTIFIED BY '${IDENTITY_DB_PASSWORD}';
