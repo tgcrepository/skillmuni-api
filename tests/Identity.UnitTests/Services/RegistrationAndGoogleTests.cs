@@ -36,7 +36,7 @@ public sealed class RegistrationAndGoogleTests
     {
         var h = new IdentityHarness();
         var challenge = await h.Registration.RegisterAsync(Join(), CancellationToken.None);
-        Assert.Equal(new EmailChallengeDto("new.learner@gmail.com", 30, 10, 5), challenge.Value);
+        Assert.Equal(new EmailChallengeDto("new.learner@gmail.com", 30, 10, 20), challenge.Value);
 
         var saves = h.Store.Saves;
         var result = await h.Registration.VerifyAsync(new VerifyEmailCodeRequest("new.learner@gmail.com", "123456"), CancellationToken.None);

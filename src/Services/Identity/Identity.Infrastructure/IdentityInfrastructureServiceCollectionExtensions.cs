@@ -1,5 +1,7 @@
 using Identity.Application;
 using Identity.Application.Abstractions;
+using Identity.Application.Events;
+using Identity.Application.Handlers;
 using Identity.Infrastructure.Notifications;
 using Identity.Infrastructure.Persistence;
 using Identity.Infrastructure.Security;
@@ -62,6 +64,10 @@ public static class IdentityInfrastructureServiceCollectionExtensions
         services.AddSingleton<IGoogleTokenValidator, GoogleTokenValidator>();
 
         services.AddSkillMuniMessaging<IdentityDbContext>();
+
+        // Events in (inbox + the "identity" subscription): only the Learner photo for AuthUser.photoUrl.
+        services.AddSkillMuniEventConsumer<IdentityDbContext>();
+        services.AddIntegrationEventHandler<PhotoChanged, PhotoChangedHandler>(PhotoChanged.Name);
         services.AddSingleton<INotificationSender>(sp =>
         {
             var client = sp.GetRequiredService<ServiceBusClientProvider>().Client;

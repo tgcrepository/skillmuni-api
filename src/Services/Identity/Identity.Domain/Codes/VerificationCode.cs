@@ -23,7 +23,8 @@ public enum CodeCheck
 }
 
 /// <summary>
-/// A one-time code (BR-136): 6 digits, 5 tries, a fixed lifetime, and a resend window of 30 seconds.
+/// A one-time code (BR-136): 6 digits, a hidden limit on wrong tries (BR-11: 20), a fixed lifetime, and a resend
+/// window of 30 seconds.
 /// Only a keyed hash of the code is stored.
 /// </summary>
 public sealed class VerificationCode : Entity
@@ -91,7 +92,7 @@ public sealed class VerificationCode : Entity
         }
     }
 
-    /// <summary>Checks an attempt. A wrong attempt uses up a try; the fifth wrong one exhausts the code.</summary>
+    /// <summary>Checks an attempt. A wrong attempt uses up a try; the last allowed wrong one exhausts the code.</summary>
     public CodeCheck Check(bool matches, DateTime now)
     {
         if (ConsumedAt is not null || now >= ExpiresAt)

@@ -363,6 +363,36 @@ resource identitySendsNotifications 'Microsoft.Authorization/roleAssignments@202
   }
 }
 
+// Identity consumes only the Learner photo (AuthUser.photoUrl, A-277).
+resource identitySubscription 'Microsoft.ServiceBus/namespaces/topics/subscriptions@2022-10-01-preview' = {
+  parent: eventsTopic
+  name: 'identity'
+  properties: {
+    maxDeliveryCount: 10
+    lockDuration: 'PT1M'
+    deadLetteringOnMessageExpiration: true
+  }
+}
+
+resource identitySubscriptionFilter 'Microsoft.ServiceBus/namespaces/topics/subscriptions/rules@2022-10-01-preview' = {
+  parent: identitySubscription
+  name: '$Default'
+  properties: {
+    filterType: 'SqlFilter'
+    sqlFilter: { sqlExpression: 'sys.Label = \'learner.photo.changed\'' }
+  }
+}
+
+resource identityReceivesEvents 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(identitySubscription.id, identityAppId.id, roles.serviceBusDataReceiver)
+  scope: identitySubscription
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roles.serviceBusDataReceiver)
+    principalId: identityAppId.properties.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
 resource learnerSubscription 'Microsoft.ServiceBus/namespaces/topics/subscriptions@2022-10-01-preview' = {
   parent: eventsTopic
   name: 'learner'
@@ -640,7 +670,7 @@ var commonEnv = [
 
 module identityApp 'modules/container-app.bicep' = {
   name: 'ca-identity'
-  dependsOn: [acrPullIdentity, vaultIdentity, redisAccessIdentity]
+  dependsOn: [acrPullIdentity, vaultIdentity, redisAccessIdentity, identityReceivesEvents]
   params: {
     name: 'ca-identity'
     location: location
@@ -663,6 +693,7 @@ module identityApp 'modules/container-app.bicep' = {
       { name: 'Auth__SigningPrivateKeyPem', secretRef: 'auth-private-key' }
       { name: 'Auth__SigningPublicKeyPem', secretRef: 'auth-public-key' }
       { name: 'ServiceBus__FullyQualifiedNamespace', value: '${bus.name}.servicebus.windows.net' }
+      { name: 'ServiceBus__Subscription', value: identitySubscription.name }
     ])
   }
 }
