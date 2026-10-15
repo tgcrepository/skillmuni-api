@@ -15,8 +15,8 @@ public sealed class MatcherAndListTests
     [Fact]
     public void Proof_counts_more_than_a_declared_skill()
     {
-        var proven = _matcher.Score(["Communication", "English"], "Pune", "Maharashtra", false, Profile(new("Communication", "verified"), new("English", "assessed")));
-        var declared = _matcher.Score(["Communication", "English"], "Pune", "Maharashtra", false, Profile(new("Communication", "declared"), new("English", "declared")));
+        var proven = _matcher.Score(["Communication", "English"], "Pune", "Maharashtra", false, Profile(new LearnerSkill("Communication", "verified"), new LearnerSkill("English", "assessed")));
+        var declared = _matcher.Score(["Communication", "English"], "Pune", "Maharashtra", false, Profile(new LearnerSkill("Communication", "declared"), new LearnerSkill("English", "declared")));
 
         // 0.6 × 1.0 + 0.25 × 1 (Pune) + 0.15 × 0.5 (no assessment) = 92.5 → 93; declared: 0.6 × 0.8 → 80.5 → 81.
         Assert.Equal(93, proven.Percent);
@@ -28,7 +28,7 @@ public sealed class MatcherAndListTests
     [Fact]
     public void Missing_skills_show_as_the_gap()
     {
-        var result = _matcher.Score(CsSkills, "Mumbai", "Maharashtra", false, Profile(new("Communication", "verified"), new("customer service", "declared")));
+        var result = _matcher.Score(CsSkills, "Mumbai", "Maharashtra", false, Profile(new LearnerSkill("Communication", "verified"), new LearnerSkill("customer service", "declared")));
 
         Assert.Equal(new[] { "Communication", "Customer service" }, result.Info.Skills);
         Assert.Equal("Skills: 2 of 6 match (communication, customer service)", result.Info.Reasons[0].Text);
@@ -41,8 +41,8 @@ public sealed class MatcherAndListTests
     [Fact]
     public void Remote_jobs_suit_everyone_and_the_assessment_lifts_the_match()
     {
-        var before = _matcher.Score(["Typing"], "Remote", string.Empty, true, Profile(new("Typing", "verified")));
-        var after = _matcher.Score(["Typing"], "Remote", string.Empty, true, Profile(new("Typing", "verified")) with { Archetype = "The Specialist Operator" });
+        var before = _matcher.Score(["Typing"], "Remote", string.Empty, true, Profile(new LearnerSkill("Typing", "verified")));
+        var after = _matcher.Score(["Typing"], "Remote", string.Empty, true, Profile(new LearnerSkill("Typing", "verified")) with { Archetype = "The Specialist Operator" });
 
         Assert.Equal(93, before.Percent);
         Assert.Equal(100, after.Percent);
@@ -75,7 +75,7 @@ public sealed class MatcherAndListTests
         Assert.Equal(new[] { "a", "c" }, items.Where(i => ListEngine.Passes(i, withRemote.Filters, Get)).Select(i => i.Item1));
 
         var none = ListEngine.ParseQuery(null, null, null, null, """{"city":["Pune"],"workMode":["hybrid"]}""", 200);
-        Assert.Empty(items.Where(i => ListEngine.Passes(i, none.Filters, Get)));
+        Assert.DoesNotContain(items, i => ListEngine.Passes(i, none.Filters, Get));
         var suggestions = ListEngine.Suggestions(items, none.Filters, Get);
         var only = Assert.Single(suggestions);
         Assert.Equal(("workMode", "hybrid", 1), (only.Key, only.Id, only.Count));
