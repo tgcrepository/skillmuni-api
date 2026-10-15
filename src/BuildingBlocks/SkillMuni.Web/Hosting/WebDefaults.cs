@@ -80,10 +80,8 @@ public static class WebDefaults
             {
                 o.GroupNameFormat = "'v'V";
                 o.SubstituteApiVersionInUrl = true;
-            });
-
-        // Built-in OpenAPI (.NET 10): the "v1" document picks up the API-explorer group "v1".
-        services.AddOpenApi("v1");
+            })
+            .AddOpenApi(); // Built-in OpenAPI (.NET 10), one document per API version (/openapi/v1.json).
         return builder;
     }
 
@@ -95,7 +93,7 @@ public static class WebDefaults
         // Each service publishes /openapi/v1.json; the gateway serves them together (development only).
         if (app.Environment.IsDevelopment())
         {
-            app.MapOpenApi().AllowAnonymous();
+            app.MapOpenApi().AllowAnonymous().WithDocumentPerVersion();
         }
 
         app.UseAuthentication();
