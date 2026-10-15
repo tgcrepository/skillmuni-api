@@ -35,11 +35,11 @@ public sealed class Account : Entity
 
     public string? GoogleSubject { get; private set; }
 
+    /// <summary>Locked is an administrative state (423); wrong passwords never lock an account (B-46).</summary>
     public AccountStatus Status { get; private set; }
 
-    public DateTime? LockedUntil { get; private set; }
-
-    public int FailedPasswordAttempts { get; private set; }
+    /// <summary>The Learner profile photo (<c>learner.photo.changed</c>), for <c>AuthUser.photoUrl</c> (A-277).</summary>
+    public string? PhotoUrl { get; private set; }
 
     public string Market { get; private set; } = "IN";
 
@@ -88,7 +88,7 @@ public sealed class Account : Entity
             a.GoogleSubject = googleSubject;
         });
 
-    public bool IsLocked(DateTime now) => Status == AccountStatus.Locked || (LockedUntil is { } until && until > now);
+    public bool IsLocked(DateTime now) => Status == AccountStatus.Locked;
 
     public void GrantRole(string role, DateTime now)
     {
@@ -105,23 +105,15 @@ public sealed class Account : Entity
         UpdatedAt = now;
     }
 
-    /// <summary>Counts a wrong password; after <paramref name="maxAttempts"/> the account is locked for a while.</summary>
-    public void RecordFailedPassword(DateTime now, int maxAttempts, TimeSpan lockFor)
+    public void RecordLogin(DateTime now)
     {
-        FailedPasswordAttempts++;
-        if (FailedPasswordAttempts >= maxAttempts)
-        {
-            LockedUntil = now + lockFor;
-            FailedPasswordAttempts = 0;
-        }
-
+        LastLoginAt = now;
         UpdatedAt = now;
     }
 
-    public void RecordLogin(DateTime now)
+    public void SetPhoto(string? photoUrl, DateTime now)
     {
-        FailedPasswordAttempts = 0;
-        LastLoginAt = now;
+        PhotoUrl = string.IsNullOrWhiteSpace(photoUrl) ? null : photoUrl;
         UpdatedAt = now;
     }
 
@@ -131,12 +123,9 @@ public sealed class Account : Entity
         UpdatedAt = now;
     }
 
-    /// <summary>A completed password reset also lifts a temporary lock.</summary>
     public void ChangePassword(string passwordHash, DateTime now)
     {
         PasswordHash = passwordHash;
-        FailedPasswordAttempts = 0;
-        LockedUntil = null;
         UpdatedAt = now;
     }
 
@@ -162,6 +151,7 @@ public sealed class Account : Entity
         Phone = null;
         PasswordHash = null;
         GoogleSubject = null;
+        PhotoUrl = null;
         UpdatedAt = now;
     }
 

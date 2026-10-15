@@ -3,6 +3,7 @@ using System.Text.Json;
 using Identity.Domain.Accounts;
 using Identity.Domain.Codes;
 using Microsoft.EntityFrameworkCore;
+using SkillMuni.Messaging.Inbox;
 using SkillMuni.Messaging.Outbox;
 
 namespace Identity.IntegrationTests;
@@ -33,7 +34,7 @@ public sealed class AuthEndpointsTests(IdentityApiFactory api)
         var challenge = await (await client.PostJsonAsync("/api/v1/auth/register", new { firstName = "Asha", lastName = "Rao", email, password = "letmein123", consent = true }))
             .JsonAsync(HttpStatusCode.OK);
         Assert.Equal(email, challenge.GetProperty("email").GetString());
-        Assert.Equal(5, challenge.GetProperty("triesLeft").GetInt32());
+        Assert.Equal(20, challenge.GetProperty("triesLeft").GetInt32());
 
         var user = await (await client.PostJsonAsync("/api/v1/auth/email/verify", new { email, code = IdentityApiFactory.FixedCode }))
             .JsonAsync(HttpStatusCode.OK);
@@ -72,7 +73,58 @@ public sealed class AuthEndpointsTests(IdentityApiFactory api)
     }
 
     [Fact]
-    public async Task Five_tries_then_429_and_the_right_code_signs_in()
+    public async Task Learner_photo_event_sets_the_session_photo_url()
+    {
+        var client = api.CreateLearnerClient();
+        var email = ApiAssertions.NewEmail();
+        await (await client.PostJsonAsync("/api/v1/auth/register", new { firstName = "Asha", lastName = "Rao", email, password = "letmein123", consent = true })).JsonAsync(HttpStatusCode.OK);
+        var user = await (await client.PostJsonAsync("/api/v1/auth/email/verify", new { email, code = IdentityApiFactory.FixedCode })).JsonAsync(HttpStatusCode.OK);
+        var id = Guid.Parse(user.GetProperty("id").GetString()!);
+
+        var photo = new { learnerId = id, photoUrl = "/api/v1/profile/photo?v=1", tenantId = "skillmuni-in" };
+        var eventId = Guid.NewGuid();
+        Assert.Equal(DispatchOutcome.Handled, await api.DeliverAsync("learner.photo.changed", photo, eventId));
+        Assert.Equal(DispatchOutcome.Duplicate, await api.DeliverAsync("learner.photo.changed", photo, eventId));
+
+        var session = await (await client.GetAsync("/api/v1/session")).JsonAsync(HttpStatusCode.OK);
+        Assert.Equal("/api/v1/profile/photo?v=1", session.GetProperty("photoUrl").GetString());
+    }
+
+    [Fact]
+    public async Task Internal_email_owner_lookup_takes_the_email_in_the_body()
+    {
+        var client = api.CreateLearnerClient();
+        var email = ApiAssertions.NewEmail();
+        await (await client.PostJsonAsync("/api/v1/auth/register", new { firstName = "Asha", lastName = "Rao", email, password = "letmein123", consent = true })).JsonAsync(HttpStatusCode.OK);
+        var user = await (await client.PostJsonAsync("/api/v1/auth/email/verify", new { email, code = IdentityApiFactory.FixedCode })).JsonAsync(HttpStatusCode.OK);
+
+        var service = api.CreateClient();
+        var owner = await (await service.PostJsonAsync("/internal/accounts/email-owner", new { email })).JsonAsync(HttpStatusCode.OK);
+        Assert.Equal(user.GetProperty("id").GetString(), owner.GetProperty("accountId").GetString());
+        Assert.Equal("account-not-found", await (await service.PostJsonAsync("/internal/accounts/email-owner", new { email = ApiAssertions.NewEmail() })).ProblemCodeAsync(HttpStatusCode.NotFound));
+
+        // No personal data in URLs: the old query-string form is gone.
+        Assert.Equal(HttpStatusCode.MethodNotAllowed, (await service.GetAsync($"/internal/accounts/email-owner?email={Uri.EscapeDataString(email)}")).StatusCode);
+    }
+
+    [Fact]
+    public async Task Wrong_passwords_never_lock_the_account()
+    {
+        var client = api.CreateLearnerClient();
+        var email = ApiAssertions.NewEmail();
+        await (await client.PostJsonAsync("/api/v1/auth/register", new { firstName = "Asha", lastName = "Rao", email, password = "letmein123", consent = true })).JsonAsync(HttpStatusCode.OK);
+        await (await client.PostJsonAsync("/api/v1/auth/email/verify", new { email, code = IdentityApiFactory.FixedCode })).JsonAsync(HttpStatusCode.OK);
+
+        for (var i = 0; i < 12; i++)
+        {
+            Assert.Equal("wrong-credentials", await (await client.PostJsonAsync("/api/v1/auth/login", new { email, password = "nope-nope" })).ProblemCodeAsync(HttpStatusCode.Unauthorized));
+        }
+
+        await (await client.PostJsonAsync("/api/v1/auth/login", new { email, password = "letmein123" })).JsonAsync(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task Hidden_limit_of_20_wrong_codes_then_429()
     {
         var phone = ApiAssertions.NewPhone();
         await SeedPhoneAccountAsync(phone);
@@ -82,7 +134,8 @@ public sealed class AuthEndpointsTests(IdentityApiFactory api)
         Assert.Equal($"+91 {phone[..5]} {phone[5..]}", challenge.GetProperty("sentTo").GetString());
         Assert.Equal(30, challenge.GetProperty("resendIn").GetInt32());
 
-        for (var left = 4; left >= 1; left--)
+        Assert.Equal(20, challenge.GetProperty("triesLeft").GetInt32());
+        for (var left = 19; left >= 1; left--)
         {
             var wrong = await client.PostJsonAsync("/api/v1/auth/otp/verify", new { phone, code = "000001" });
             var json = await wrong.JsonAsync(HttpStatusCode.UnprocessableEntity);
@@ -90,8 +143,8 @@ public sealed class AuthEndpointsTests(IdentityApiFactory api)
             Assert.Equal(left.ToString(System.Globalization.CultureInfo.InvariantCulture), json.GetProperty("errors").GetProperty("triesLeft")[0].GetString());
         }
 
-        var fifth = await client.PostJsonAsync("/api/v1/auth/otp/verify", new { phone, code = "000001" });
-        Assert.Equal("too-many-tries", await fifth.ProblemCodeAsync(HttpStatusCode.TooManyRequests));
+        var last = await client.PostJsonAsync("/api/v1/auth/otp/verify", new { phone, code = "000001" });
+        Assert.Equal("too-many-tries", await last.ProblemCodeAsync(HttpStatusCode.TooManyRequests));
     }
 
     [Fact]

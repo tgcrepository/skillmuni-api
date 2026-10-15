@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
+    <PackageReference Include="MySql.EntityFrameworkCore" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Assessment.Application\Assessment.Application.csproj" />
+    <ProjectReference Include="..\..\..\BuildingBlocks\SkillMuni.Messaging\SkillMuni.Messaging.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Career Drivers Survey 2025 seed content (pairs, islands, drivers, archetypes). -->
+    <EmbeddedResource Include="Content\career-drivers.json" LogicalName="Assessment.Content.career-drivers.json" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Assessment.UnitTests" />
+    <InternalsVisibleTo Include="Assessment.IntegrationTests" />
+  </ItemGroup>
+</Project>

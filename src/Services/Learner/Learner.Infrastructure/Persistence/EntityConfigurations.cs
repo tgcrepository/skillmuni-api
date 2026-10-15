@@ -8,7 +8,7 @@ namespace Learner.Infrastructure.Persistence;
 // Generated from one spec together with the InitialCreate migration and the snapshot, so the three agree.
 // PII columns: learners.first_name/last_name/phone/email/gender/date_of_birth, linked_identities.masked/last4/
 // birthday/verified_name, enrolments.bank_* and upi (account number AES-GCM encrypted), quest_answers.answers,
-// drafts.value, feedback.comment.
+// drafts.value, feedback.comment, job_profiles.about / cv_prefill.
 
 internal static class Columns
 {
@@ -58,6 +58,7 @@ internal sealed class LearnerProfileConfiguration : IEntityTypeConfiguration<Lea
         b.Property(e => e.EstimatedAt).HasColumnName("estimated_at");
         b.Property(e => e.ArchetypeName).HasColumnName("archetype_name").HasMaxLength(100);
         b.Property(e => e.ArchetypeSummary).HasColumnName("archetype_summary").HasMaxLength(1000);
+        b.Property(e => e.JobProfileCompletedAt).HasColumnName("job_profile_completed_at");
         b.Property(e => e.JoinedAt).HasColumnName("joined_at");
         b.Property(e => e.UpdatedAt).HasColumnName("updated_at");
 
@@ -174,6 +175,28 @@ internal sealed class FeedbackConfiguration : IEntityTypeConfiguration<Feedback>
         b.Property(e => e.CreatedAt).HasColumnName("created_at");
 
         b.HasIndex(e => new { e.LearnerId, e.XpAwarded, e.CreatedAt }).HasDatabaseName("ix_feedback_learner_xp");
+    }
+}
+
+internal sealed class JobProfileSettingsConfiguration : IEntityTypeConfiguration<JobProfileSettings>
+{
+    public void Configure(EntityTypeBuilder<JobProfileSettings> b)
+    {
+        b.ToTable("job_profiles");
+        Columns.Keys(b);
+        b.Property(e => e.LearnerId).HasColumnName("learner_id").HasColumnType(Columns.Guid);
+        b.Property(e => e.About).HasColumnName("about").HasMaxLength(JobProfileSettings.MaxAboutLength);
+        b.Property(e => e.HideContact).HasColumnName("hide_contact");
+        b.Property(e => e.ExpiresDays).HasColumnName("expires_days");
+        b.Property(e => e.ShareCode).HasColumnName("share_code").HasMaxLength(16).IsRequired();
+        b.Property(e => e.CvPrefillJson).HasColumnName("cv_prefill").HasColumnType("json").IsRequired();
+        b.Property(e => e.CvId).HasColumnName("cv_id").HasColumnType(Columns.Guid);
+        b.Property(e => e.CvBlob).HasColumnName("cv_blob").HasMaxLength(200);
+        b.Property(e => e.AppliedChangesJson).HasColumnName("applied_changes").HasColumnType("json").IsRequired();
+        b.Property(e => e.UpdatedAt).HasColumnName("updated_at");
+
+        b.HasIndex(e => e.LearnerId).IsUnique().HasDatabaseName("ux_job_profiles_learner");
+        b.HasIndex(e => new { e.TenantId, e.ShareCode }).IsUnique().HasDatabaseName("ux_job_profiles_tenant_share_code");
     }
 }
 

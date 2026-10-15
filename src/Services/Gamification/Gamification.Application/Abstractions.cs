@@ -24,6 +24,12 @@ public interface IXpLedger
 {
     Task<bool> ExistsAsync(Guid learnerId, string reason, string sourceId, CancellationToken cancellationToken);
 
+    /// <summary>When this reason last paid the learner, if ever (BR-114's 30-day rule).</summary>
+    Task<DateTime?> LastCreditAsync(Guid learnerId, string reason, CancellationToken cancellationToken);
+
+    /// <summary>The learner's one XP total: the sum of their ledger (BR-138).</summary>
+    Task<int> TotalAsync(Guid learnerId, CancellationToken cancellationToken);
+
     Task<PagedResult<XpEntry>> ListAsync(Guid learnerId, PageRequest page, CancellationToken cancellationToken);
 
     void Add(XpEntry entry);

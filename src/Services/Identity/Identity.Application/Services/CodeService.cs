@@ -13,7 +13,7 @@ namespace Identity.Application.Services;
 /// </summary>
 public sealed record CodeChallenge(string? CodeToSend, int ResendIn, int TriesLeft, int ValidForMinutes);
 
-/// <summary>One-time codes for every flow (BR-136): 6 digits, 5 tries then 429, expiry 410, resend after 30 s.</summary>
+/// <summary>One-time codes for every flow (BR-136): 6 digits, hidden limit of 20 wrong tries then 429 (BR-11), expiry 410, resend after 30 s.</summary>
 public interface ICodeService
 {
     /// <param name="reuseUsable">Return a still-valid code's challenge instead of sending a new one (page reloads).</param>

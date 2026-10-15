@@ -28,12 +28,12 @@ repeat across courses, so `(courseSlug, moduleSlug)` is the unique key. `briefId
 | `learner.job-profile.completed` | Learner | learnerId | Gamification → +50 mission (BR-110), key `mission:job-profile`; Careers → Launchpad mission tick |
 | `learner.programme.enrolled` | Learner | learnerId, programmeCode, paysStipend | Gamification → +100 once per learner (BR-113), key `programme:once` |
 | `learner.feedback.sent` | Learner | learnerId, mood | Gamification → +5 at most once per 30 days (BR-114), decided by Gamification |
-| `learner.photo.changed` | Learner | learnerId, photoUrl | Identity → `AuthUser.photoUrl` |
+| `learner.photo.changed` | Learner | learnerId, photoUrl | Identity → `AuthUser.photoUrl` (subscription `identity`); Gamification → Arena photo |
 | `learner.identity.link-changed` | Learner | learnerId, document, linked | — |
 | `cv.parse.completed` | CV | cvId, learnerId, outcome, prefill | Learner → pre-fill unanswered quest fields |
 | `cv.document.deleted` | CV | cvId, learnerId | Learner |
 | `assessment.island.cleared` | Assessment | learnerId, attempt, island (1–3), firstAttempt | Gamification → +25 when firstAttempt (BR-104), key `assessment:island:{n}` |
-| `assessment.attempt.submitted` | Assessment | learnerId, attempt, firstAttempt, archetypeName, archetypeSummary, topDrivers[] | Gamification → +25 when firstAttempt (BR-105), key `assessment:submitted`, Career Clarity badge progress; Careers → Launchpad mission; Learning → first move "Discover your Career Drivers" |
+| `assessment.attempt.submitted` | Assessment | learnerId, attempt, firstAttempt, archetypeId, archetypeName, archetypeEmoji, archetypeSummary, topDrivers[] (top 3 driver names, highest first), topDriverIds[] (the same as A–I) | Gamification → +25 when firstAttempt (BR-105), key `assessment:submitted`, Career Clarity badge progress; Careers → Launchpad mission; Learning → first move "Discover your Career Drivers" |
 | `learning.activity.recorded` | Learning | learnerId, minutes (1–60 per report, at most 1440 per local day) | Gamification → daily quest "Learn for 15 minutes" (BR-118) |
 | `learning.brief.completed` | Learning | learnerId, briefId, moduleSlug, courseSlug, firstCompletion (sent once per brief, on its quiz's first submit, so always true) | Gamification → daily quest "Finish Brain-Vita" when courseSlug = `brain-vita` and firstCompletion (B-44); badge progress |
 | `learning.quiz.submitted` | Learning | learnerId, quizId, briefId, moduleSlug, courseSlug, correct, total, firstAttempt (every submit) | Gamification → +1 per correct on firstAttempt (BR-106), key `quiz:{quizId}`; streak day (§4.4, first-attempt submits only, learner's local date, B-45); daily quest "Score 80%+" |

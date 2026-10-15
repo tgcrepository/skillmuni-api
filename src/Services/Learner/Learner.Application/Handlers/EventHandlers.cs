@@ -71,18 +71,45 @@ public sealed class ContactVerifiedHandler(ILearnerRepository learners, TimeProv
     }
 }
 
-/// <summary>Claim V4: the institute's CV pre-filled quests 1–5, so they count as done.</summary>
-public sealed class ClaimConfirmedHandler(ILearnerRepository learners, TimeProvider clock) : IIntegrationEventHandler<ClaimConfirmed>
+/// <summary>
+/// Claim V4 (BR-119): the institute's CV pre-filled quests 1–5, so they count as done, and the learner earns the
+/// normal step and quest XP for them (550) through the usual events: every step of each newly done quest, then the
+/// quest itself (its badge follows in Gamification). Steps already paid are deduplicated by Gamification's ledger.
+/// </summary>
+public sealed partial class ClaimConfirmedHandler(
+    ILearnerRepository learners,
+    QuestCatalog catalog,
+    IJobProfileCompletion jobProfile,
+    IOutbox outbox,
+    TimeProvider clock,
+    ILogger<ClaimConfirmedHandler> logger) : IIntegrationEventHandler<ClaimConfirmed>
 {
     public const int PrefilledQuests = 5;
 
     public async Task HandleAsync(ClaimConfirmed e, CancellationToken cancellationToken)
     {
-        if (await learners.GetAsync(e.AccountId, cancellationToken) is { } learner)
+        if (await learners.GetAsync(e.AccountId, cancellationToken) is not { } learner)
         {
-            learner.FastForwardQuests(PrefilledQuests, clock.GetUtcNow().UtcDateTime);
+            LogNoLearner(logger, e.AccountId);
+            return;
         }
+
+        var done = learner.FastForwardQuests(PrefilledQuests, clock.GetUtcNow().UtcDateTime);
+        foreach (var quest in catalog.Quests.Where(q => done.Contains(q.Number)))
+        {
+            for (var part = 1; part <= quest.Parts.Count; part++)
+            {
+                outbox.Add(new QuestStepCompleted(learner.Id, quest.Slug, quest.Number, part, Paid: true) { TenantId = e.TenantId });
+            }
+
+            outbox.Add(new QuestCompleted(learner.Id, quest.Slug, quest.Number, quest.Badge) { TenantId = e.TenantId });
+        }
+
+        await jobProfile.CheckAsync(learner, null, null, cancellationToken);
     }
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Claim confirmed before the learner exists {LearnerId}")]
+    private static partial void LogNoLearner(ILogger logger, Guid learnerId);
 }
 
 /// <summary>MISS-08: files first (so a retry can still find them), then every row.</summary>
@@ -126,12 +153,28 @@ public sealed class AssessmentSubmittedHandler(ILearnerRepository learners, Time
     }
 }
 
-/// <summary>A-245: answers read from a CV pre-fill the quests; anything the learner already saved is kept.</summary>
-public sealed class CvParsedHandler(IQuestAnswersRepository answers, QuestCatalog catalog, TimeProvider clock) : IIntegrationEventHandler<CvParsed>
+/// <summary>
+/// A-245: answers read from a CV pre-fill the quests; anything the learner already saved is kept. The read is also
+/// kept for the Job Profile's "Upload a newer CV" suggestions (P5).
+/// </summary>
+public sealed class CvParsedHandler(
+    IQuestAnswersRepository answers,
+    IJobProfileRepository jobProfiles,
+    QuestCatalog catalog,
+    TimeProvider clock) : IIntegrationEventHandler<CvParsed>
 {
     public async Task HandleAsync(CvParsed e, CancellationToken cancellationToken)
     {
         var now = clock.GetUtcNow().UtcDateTime;
+        var settings = await jobProfiles.FindAsync(e.LearnerId, cancellationToken);
+        if (settings is null)
+        {
+            settings = JobProfileSettings.Create(e.TenantId, e.LearnerId, ShareCodes.New(), now);
+            jobProfiles.Add(settings);
+        }
+
+        settings.KeepCvRead(e.CvId, JsonSerializer.Serialize(e.Prefill), now);
+
         foreach (var (slug, values) in e.Prefill)
         {
             if (catalog.Find(slug) is null)

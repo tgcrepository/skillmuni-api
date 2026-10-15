@@ -29,8 +29,9 @@ public static class PlayerViews
             var p = progress.FirstOrDefault(x => x.QuestId == q.Id);
             var value = Math.Min(p?.Value ?? 0, q.Target);
             var done = p?.Completed == true;
-            var label = q.Unit is null ? $"{value} / {q.Target}" : $"{value} / {q.Target} {q.Unit}";
-            return new DailyQuestDto(q.Id, q.Icon, q.Title, label, Math.Round(value * 100.0 / q.Target, 2), q.Xp, done, q.Link);
+            var label = done && q.Label is not null ? "Done for today"
+                : q.Label ?? (q.Unit is null ? $"{value} / {q.Target}" : $"{value} / {q.Target} {q.Unit}");
+            return new DailyQuestDto(q.Id, q.Icon, null, q.Title, label, Math.Round(value * 100.0 / q.Target, 2), q.Xp, done, q.Link);
         }).ToList());
 
     /// <summary>The next local midnight, in UTC.</summary>
@@ -51,10 +52,12 @@ public static class PlayerViews
         var earnedAt = earned.TryGetValue(badge.Id, out var at) ? at : (DateTime?)null;
         var value = BadgeProgress.Value(player, badge, rules);
 
-        // A quest badge shows progress from the parts done in that quest.
-        var questSlug = badge.Id.StartsWith("quest-", StringComparison.Ordinal) ? badge.Id["quest-".Length..] : null;
+        // A quest badge shows progress from the parts done in that quest; the quest in progress is "progress" even
+        // before its first part (badges.data.ts questBadges), later quests are locked.
+        var questSlug = badge.IsQuest ? badge.Id[BadgeCatalogue.QuestPrefix.Length..] : null;
         var questParts = questSlug is null ? 0 : player.Counter(Counters.QuestParts(questSlug));
         var questTotal = questSlug is null ? 0 : rules.QuestBadges().FirstOrDefault(q => q.Slug == questSlug)?.Parts ?? 0;
+        var currentQuest = questSlug is not null && CurrentQuest(player, rules)?.Slug == questSlug;
 
         string state;
         if (earnedAt is not null)
@@ -65,7 +68,7 @@ public static class PlayerViews
         {
             state = "secret";
         }
-        else if (value > 0 || questParts > 0)
+        else if (value > 0 || questParts > 0 || currentQuest)
         {
             state = "progress";
         }
@@ -83,7 +86,7 @@ public static class PlayerViews
         else if (questSlug is not null)
         {
             percent = questTotal == 0 ? 0 : Math.Round(Math.Min(questParts, questTotal) * 100.0 / questTotal, 2);
-            label = questParts > 0 ? $"{Math.Min(questParts, questTotal)} / {questTotal} parts" : null;
+            label = questParts > 0 || currentQuest ? $"{Math.Min(questParts, questTotal)} / {questTotal} parts" : null;
         }
         else if (badge.Secret || badge.Goal <= 1 && !badge.Tracked)
         {
@@ -97,12 +100,19 @@ public static class PlayerViews
         }
 
         var tiers = badge.Tiers is { } t ? new BadgeTiersDto(t.Count(goal => player.BestStreak >= goal), t.Count) : null;
-        var cta = earnedAt is null && badge.CtaLabel is not null && badge.CtaUrl is not null ? new BadgeCtaDto(badge.CtaLabel, badge.CtaUrl) : null;
+        BadgeCtaDto? cta = null;
+        if (earnedAt is null && badge.CtaUrl is not null)
+        {
+            var ctaLabel = questSlug is null ? badge.CtaLabel : currentQuest ? "Continue quest" : "Go to quests";
+            cta = ctaLabel is null ? null : new BadgeCtaDto(ctaLabel, badge.CtaUrl);
+        }
+
         var ownedPct = playerCount == 0 ? 0 : Math.Round(owners.GetValueOrDefault(badge.Id) * 100.0 / playerCount, 1);
         return new BadgeDto(
             badge.Id,
             badge.Name,
             badge.Icon,
+            badge.Image,
             badge.Category,
             badge.Rarity,
             state,
@@ -116,6 +126,10 @@ public static class PlayerViews
             player.Showcase.Contains(badge.Id, StringComparer.Ordinal));
     }
 
+    /// <summary>The first registration quest not finished yet (null when all 8 are done).</summary>
+    public static QuestBadge? CurrentQuest(Player player, GamificationOptions rules) =>
+        rules.QuestBadges().FirstOrDefault(q => player.Counter(Counters.QuestDone(q.Slug)) == 0);
+
     /// <summary>MISS-01 ledger labels.</summary>
     public static string ReasonLabel(string reason) => reason switch
     {
@@ -124,9 +138,10 @@ public static class PlayerViews
         "profile.task" => "Profile",
         "programme.enrolled" => "Programme joined",
         "feedback" => "Feedback",
-        "claim.confirmed" => "Institute profile confirmed",
-        "assessment.career-drivers" => "Career Drivers",
+        "assessment" => "Career Drivers",
         "quiz.correct" => "Quiz",
+        "first-moves" => "First moves",
+        "mission" => "Launchpad mission",
         _ when reason.StartsWith("daily.", StringComparison.Ordinal) => "Daily quest",
         _ => reason,
     };

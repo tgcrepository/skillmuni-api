@@ -11,11 +11,12 @@
      losing it makes stored account numbers unreadable)
    - `cv-db-connection`: `server=<mysqlHost>;database=cv;user=cv_svc;password=…;SslMode=Required`
    - `gamification-db-connection`: `server=<mysqlHost>;database=gamification;user=gamification_svc;password=…;SslMode=Required`
+   - `assessment-db-connection`: `server=<mysqlHost>;database=assessment;user=assessment_svc;password=…;SslMode=Required`
    - `learning-db-connection`: `server=<mysqlHost>;database=learning;user=learning_svc;password=…;SslMode=Required`
 3. Create the per-service MySQL user (grants on its own schema only): `identity_svc` with
-   `SELECT, INSERT, UPDATE, DELETE` on `identity.*`, `learner_svc` on `learner.*` and `cv_svc` on `cv.*`, `gamification_svc` on `gamification.*`, `learning_svc` on `learning.*`; a separate migration
+   `SELECT, INSERT, UPDATE, DELETE` on `identity.*`, `learner_svc` on `learner.*` and `cv_svc` on `cv.*`, `gamification_svc` on `gamification.*`, `assessment_svc` on `assessment.*`, `learning_svc` on `learning.*`; a separate migration
    user with DDL rights runs the EF bundles.
-4. Push images `skillmuni-identity`, `skillmuni-learner`, `skillmuni-cv`, `skillmuni-gamification`, `skillmuni-learning` and `skillmuni-gateway` to the registry, run the migration
+4. Push images `skillmuni-identity`, `skillmuni-learner`, `skillmuni-cv`, `skillmuni-gamification`, `skillmuni-assessment`, `skillmuni-learning` and `skillmuni-gateway` to the registry, run the migration
    bundles, deploy again.
 
 Each app has its own managed identity: AcrPull on the registry and Key Vault Secrets User on the vault, plus
@@ -25,6 +26,7 @@ Each app has its own managed identity: AcrPull on the registry and Key Vault Sec
 - CV: Data Sender on the events topic, Data Receiver on its `cv` subscription, Blob Data Contributor on `cv-files`
   only, Cognitive Services User on the Document Intelligence account (no keys: local auth is off).
 - Gamification: Data Sender on the events topic, Data Receiver on its `gamification` subscription.
+- Assessment: Data Sender on the events topic, Data Receiver on its `assessment` subscription.
 - Learning: Data Sender on the events topic, Data Receiver on its `learning` subscription.
 
 ## Local
