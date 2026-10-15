@@ -50,7 +50,8 @@ renders (A-262: one record built from the 8 quests, no second form).
   adds something: not `xp: false`, no `<key>Skipped: true`, and at least one non-empty value. Otherwise the step is
   published with `paid: false` and, being done, can never pay later.
 - **BR-119:** on `identity.claim.confirmed` quests 1–5 count as done and Learner publishes their step events (all paid)
-  and quest events, so Gamification credits the normal 550 XP and badges.
+  and quest events, so Gamification credits the normal 550 XP and badges. If it arrives before
+  `identity.learner.registered`, the learner is started from it and the registration event fills in name and contacts.
 - **BR-110:** the first time every step is filled (a skipped optional step is not), Learner publishes
   `learner.job-profile.completed` once (`learners.job_profile_completed_at`).
 

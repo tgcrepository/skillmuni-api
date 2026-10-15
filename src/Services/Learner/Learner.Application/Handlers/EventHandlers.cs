@@ -6,6 +6,7 @@ using Learner.Domain;
 using Microsoft.Extensions.Logging;
 using SkillMuni.Common.Messaging;
 using SkillMuni.Common.Storage;
+using SkillMuni.Common.Tenancy;
 
 namespace Learner.Application.Handlers;
 
@@ -76,11 +77,17 @@ public sealed class ContactVerifiedHandler(ILearnerRepository learners, TimeProv
 /// normal step and quest XP for them (550) through the usual events: every step of each newly done quest, then the
 /// quest itself (its badge follows in Gamification). Steps already paid are deduplicated by Gamification's ledger.
 /// </summary>
+/// <remarks>
+/// <c>identity.learner.registered</c> (published at the claim's code step) can be delivered after this event. The
+/// learner is then started here and the registration event fills in the name and contacts when it lands
+/// (<see cref="AccountRegisteredHandler"/>), so the claimed quests and their 550 XP are never dropped.
+/// </remarks>
 public sealed partial class ClaimConfirmedHandler(
     ILearnerRepository learners,
     QuestCatalog catalog,
     IJobProfileCompletion jobProfile,
     IOutbox outbox,
+    ITenantContext tenant,
     TimeProvider clock,
     ILogger<ClaimConfirmedHandler> logger) : IIntegrationEventHandler<ClaimConfirmed>
 {
@@ -88,13 +95,15 @@ public sealed partial class ClaimConfirmedHandler(
 
     public async Task HandleAsync(ClaimConfirmed e, CancellationToken cancellationToken)
     {
+        var now = clock.GetUtcNow().UtcDateTime;
         if (await learners.GetAsync(e.AccountId, cancellationToken) is not { } learner)
         {
+            learner = LearnerProfile.Create(e.AccountId, e.TenantId, tenant.Market, string.Empty, string.Empty, now);
+            learners.Add(learner);
             LogNoLearner(logger, e.AccountId);
-            return;
         }
 
-        var done = learner.FastForwardQuests(PrefilledQuests, clock.GetUtcNow().UtcDateTime);
+        var done = learner.FastForwardQuests(PrefilledQuests, now);
         foreach (var quest in catalog.Quests.Where(q => done.Contains(q.Number)))
         {
             for (var part = 1; part <= quest.Parts.Count; part++)
@@ -108,7 +117,7 @@ public sealed partial class ClaimConfirmedHandler(
         await jobProfile.CheckAsync(learner, null, null, cancellationToken);
     }
 
-    [LoggerMessage(Level = LogLevel.Warning, Message = "Claim confirmed before the learner exists {LearnerId}")]
+    [LoggerMessage(Level = LogLevel.Information, Message = "Claim confirmed before the registration event: learner started {LearnerId}")]
     private static partial void LogNoLearner(ILogger logger, Guid learnerId);
 }
 

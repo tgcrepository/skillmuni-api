@@ -33,7 +33,9 @@ directly) and `POST /internal/accounts/email-owner` `{ email }` → `{ accountId
 the body, never in the URL). Health: `/health/live`, `/health/ready`.
 
 ## Codes
-6 digits, 10 minutes, resend after 30 s, at most 5 codes an hour per target (B-06). Wrong codes: unlimited visible
+6 digits, 10 minutes, resend after 30 s, at most 5 codes an hour per target (B-06). The resend window guards a code still
+in play (also one locked by the hidden limit); a code already used ends its flow, so the next flow for the same target
+(e.g. signing up again after erasure) gets a new code at once. Verifying a used code again answers 410 `code-expired`. Wrong codes: unlimited visible
 tries with no count shown in the app; a hidden anti-abuse limit of 20 wrong codes in a row returns 429
 `too-many-tries` (BR-11, A-312). `triesLeft` stays in the payloads the app types (challenges and `invalid-code`),
 counted from that limit.

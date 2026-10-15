@@ -21,6 +21,8 @@ responder can replace it by registering another `IMuniResponder`; the API doesn'
   and gaps from Learner.
 - Sample data the mock invents is replaced by neutral copy (no named jobs, no "98.86% done", no "2 jobs match").
 - Three keys added so chips reach their topic: `the arena`, `streaks`, `daily quests`.
+- Two topics added so every chip the app shows gets an answer: `skills` (the Assess tile's "Skill check": coming soon,
+  self-rate in Your Flex Era) and `sectors` (the Launchpad sectors dialog's "Which sectors fit my skills?").
 
 ## Data from other services
 - Learner `GET internal/learners/{id}/profile-progress` (internal ingress, `X-Tenant-Id`): completeness and gaps.
@@ -33,7 +35,10 @@ responder can replace it by registering another `IMuniResponder`; the API doesn'
 ## Events
 Publishes nothing. Consumes (subscription `muni`): `identity.learner.registered` (name, joined), `gamification.xp.awarded`
 (totals and streak; lower totals arriving late are ignored), `learner.quest.completed` (quests-done bitmask),
-`assessment.attempt.submitted` (archetype), `identity.learner.erased` (deletes the learner's copy, history and ratings).
+`assessment.attempt.submitted` (archetype), `identity.learner.erased` (deletes history and ratings; the learner row becomes a
+blank tombstone (`erased_at`) so an event published before the erasure but delivered after it can't bring the learner back,
+and a token issued before the erasure gets answers but nothing is stored). `learners.version` is an optimistic concurrency
+token: parallel handlers for one learner retry instead of losing an update.
 
 ## Retention
 Chat lines and ratings older than `Muni:HistoryDays` (default 90; BRD §9 leaves it open) are deleted by a background
