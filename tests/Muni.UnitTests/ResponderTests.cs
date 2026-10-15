@@ -40,6 +40,8 @@ public sealed class ResponderTests
     [InlineData("How do streaks work?", "streak")]
     [InlineData("What's Hire Fest?", "fest")]
     [InlineData("What can you do?", "muni")]
+    [InlineData("Skill check", "skills")]
+    [InlineData("I searched for “retail”. Which sectors fit my skills?", "sectors")]
     public async Task Free_questions_are_keyword_scored(string question, string topic)
     {
         Assert.Equal(topic, (await AskAsync(question)).Topic);
@@ -144,4 +146,31 @@ public sealed class ResponderTests
 
     [Fact]
     public void Words_strip_punctuation() => Assert.Equal("what s hire fest", MuniKnowledge.Words("What’s   Hire-Fest?"));
+
+    /// <summary>Every chip the app can show (tiles, shortcuts, suggestions, then chips of chips) gets a real answer.</summary>
+    [Fact]
+    public async Task Every_chip_reaches_an_answer()
+    {
+        var queue = new Queue<(string Text, string? Intent)>(
+            KeywordMuniResponder.TopicTiles.Keys.Select(k => ((string)k, (string?)k))
+                .Concat(new[] { "Jobs for me", "Continue my quest", "My XP & rank", "Show my profile", "My career archetype", "hi" }.Select(t => (t, (string?)null))));
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        while (queue.TryDequeue(out var q))
+        {
+            if (!seen.Add(q.Intent ?? q.Text))
+            {
+                continue;
+            }
+
+            var answer = await AskAsync(q.Text, q.Intent);
+            Assert.True(answer.Topic != "fallback", $"\"{q.Text}\" fell back");
+            Assert.InRange(answer.Chips.Count, 0, 3);
+            foreach (var chip in answer.Chips)
+            {
+                queue.Enqueue((chip, null));
+            }
+        }
+
+        Assert.True(seen.Count > 25, $"only {seen.Count} chips reached");
+    }
 }

@@ -74,6 +74,9 @@ public sealed class VerificationCode : Entity
             TriesLeft = tries,
         };
 
+    /// <summary>Used successfully: its flow is over, so it no longer holds back a new code.</summary>
+    public bool IsConsumed => ConsumedAt is not null;
+
     /// <summary>Not used, not expired and tries remain.</summary>
     public bool IsUsable(DateTime now) => ConsumedAt is null && now < ExpiresAt && TriesLeft > 0;
 

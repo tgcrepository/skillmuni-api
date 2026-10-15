@@ -137,6 +137,26 @@ public sealed class MuniEndpointsTests(MuniApiFactory api)
         Assert.Equal(DispatchOutcome.Handled, await api.DeliverAsync("identity.learner.erased", new { accountId = me, tenantId = TestTokens.Tenant }));
         Assert.Equal(0, (await (await client.GetAsync("/api/v1/muni/history")).JsonAsync(HttpStatusCode.OK)).GetArrayLength());
 
+        // An XP event published before the erasure but delivered after it must not bring the learner back.
+        Assert.Equal(DispatchOutcome.Handled, await api.DeliverAsync("gamification.xp.awarded", new
+        {
+            learnerId = me,
+            totalXp = 5,
+            level = 1,
+            rank = "Rookie",
+            levelStartXp = 0,
+            nextLevelXp = 400,
+            badges = 0,
+            streakDays = 0,
+            tenantId = TestTokens.Tenant,
+        }));
+        var welcome = await (await client.GetAsync("/api/v1/muni/welcome")).JsonAsync(HttpStatusCode.OK);
+        Assert.StartsWith("Level 1 · Rookie, 0 XP.", welcome.GetProperty("intro").GetString(), StringComparison.Ordinal);
+
+        // A token issued before the erasure still gets answers, but nothing is kept.
+        await client.PostJsonAsync("/api/v1/muni/messages", new { text = "hello again" });
+        Assert.Equal(0, (await (await client.GetAsync("/api/v1/muni/history")).JsonAsync(HttpStatusCode.OK)).GetArrayLength());
+
         var other = Guid.NewGuid();
         await api.ClientFor(other).PostJsonAsync("/api/v1/muni/messages", new { text = "hello" });
         await using var scope = api.Services.CreateAsyncScope();

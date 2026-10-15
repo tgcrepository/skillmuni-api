@@ -39,6 +39,20 @@ public sealed class MuniLearner : Entity
 
     public DateTime UpdatedAt { get; private set; }
 
+    /// <summary>
+    /// Set when the learner erased their account (MISS-08). The row stays as a tombstone with every personal detail
+    /// blanked, so an event published before the erasure but delivered after it can't bring the learner back.
+    /// </summary>
+    public DateTime? ErasedAt { get; private set; }
+
+    /// <summary>
+    /// Optimistic concurrency: bumped on every save that changes the row. Events for one learner are handled in
+    /// parallel, so two handlers must not both write a quest mask they read before the other's commit.
+    /// </summary>
+    public int Version { get; private set; }
+
+    public bool IsErased => ErasedAt is not null;
+
     public int QuestsDone => BitOperations.PopCount((uint)QuestsDoneMask);
 
     public static MuniLearner Create(string tenantId, Guid learnerId, int level, string rank, int nextLevelXp, DateTime now) => new()
@@ -53,6 +67,11 @@ public sealed class MuniLearner : Entity
 
     public void Register(string firstName, string lastName, DateTime joinedAt, DateTime now)
     {
+        if (IsErased)
+        {
+            return;
+        }
+
         FirstName = firstName.Trim();
         LastName = lastName.Trim();
         JoinedAt ??= joinedAt;
@@ -62,7 +81,7 @@ public sealed class MuniLearner : Entity
     /// <summary>Totals, not deltas: an older event arriving late can't lower the XP shown.</summary>
     public void ApplyTotals(int totalXp, int level, string rank, int nextLevelXp, int streakDays, DateTime now)
     {
-        if (totalXp < TotalXp)
+        if (IsErased || totalXp < TotalXp)
         {
             return;
         }
@@ -77,7 +96,7 @@ public sealed class MuniLearner : Entity
 
     public void CompleteQuest(int quest, DateTime now)
     {
-        if (quest is < 1 or > QuestCount)
+        if (IsErased || quest is < 1 or > QuestCount)
         {
             return;
         }
@@ -86,9 +105,23 @@ public sealed class MuniLearner : Entity
         UpdatedAt = now;
     }
 
+    /// <summary>Blanks everything Muni copied about the learner and keeps the row as a tombstone.</summary>
+    public void Erase(DateTime now)
+    {
+        FirstName = string.Empty;
+        LastName = string.Empty;
+        JoinedAt = null;
+        TotalXp = 0;
+        StreakDays = 0;
+        QuestsDoneMask = 0;
+        Archetype = null;
+        ErasedAt ??= now;
+        UpdatedAt = now;
+    }
+
     public void SetArchetype(string? archetype, DateTime now)
     {
-        if (!string.IsNullOrWhiteSpace(archetype))
+        if (!IsErased && !string.IsNullOrWhiteSpace(archetype))
         {
             Archetype = archetype.Trim();
             UpdatedAt = now;

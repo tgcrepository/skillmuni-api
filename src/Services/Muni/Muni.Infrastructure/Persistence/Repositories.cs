@@ -55,7 +55,6 @@ internal sealed class MuniDataEraser(MuniDbContext db) : IMuniDataEraser
                 await using var transaction = await db.Database.BeginTransactionAsync(ct);
                 await db.Messages.Where(x => x.LearnerId == learnerId).ExecuteDeleteAsync(ct);
                 await db.Ratings.Where(x => x.LearnerId == learnerId).ExecuteDeleteAsync(ct);
-                await db.Learners.Where(x => x.Id == learnerId).ExecuteDeleteAsync(ct);
                 await transaction.CommitAsync(ct);
             },
             cancellationToken);

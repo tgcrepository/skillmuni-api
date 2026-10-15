@@ -99,6 +99,30 @@ internal static class MuniKnowledge
             ],
             ["How does job matching work?", "How do I earn XP?"])),
 
+        // Added (not in the mock): the "Assess" tile's "Skill check" chip and the Launchpad sectors dialog's
+        // "Which sectors fit my skills?" question otherwise fall through to "I don't have that one yet".
+        new("skills", ["skill check", "skill checks", "skill test", "prove my skills", "self rate"], (m, _) => new(
+            "skills",
+            [
+                T($"Skill checks are coming soon, {m.First} 🛠️ For now, rate your own skills: employers see them on your job profile."),
+                T("• Add and self-rate your skills in Your Flex Era (quest 4)\n• Pick your top skills on your profile: +10 XP\n• Career Drivers already shows employers what drives you at work"),
+                L(
+                    I("Your skills", "Your Flex Era · quest 4", "/quests/your-flex-era"),
+                    I("Career Drivers", "36 picks · 6 min", "/assessments/career")),
+            ],
+            ["Career assessment", "What’s left in my profile?"])),
+
+        new("sectors", ["sector", "sectors", "industry", "industries", "launchpad"], (m, _) => new(
+            "sectors",
+            [
+                T($"Sectors group jobs by industry, {m.First} 🧭 The Launchpad shows how many jobs each one has and marks your best fit from your skills, education and Career Drivers."),
+                T($"• Search a sector or role on the Launchpad to see its jobs\n• Your best fit gets sharper as your job profile fills up (yours is {m.ProfilePercent}%)"),
+                L(
+                    I("Explore sectors", "Launchpad · Sectors", "/launchpad"),
+                    I("Jobs that match you", "My Jobs · Matching", "/jobs/matching")),
+            ],
+            ["How does job matching work?", "What’s left in my profile?"])),
+
         new("arena", ["arena", "the arena", "leaderboard", "top", "crown", "batch", "league", "compete", "friends"], (m, _) => new(
             "arena",
             [

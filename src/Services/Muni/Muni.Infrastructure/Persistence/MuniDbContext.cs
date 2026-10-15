@@ -33,6 +33,18 @@ public sealed class MuniDbContext : DbContext, IUnitOfWork
 
     Task IUnitOfWork.SaveChangesAsync(CancellationToken cancellationToken) => SaveChangesAsync(cancellationToken);
 
+    /// <summary>Bumps <see cref="MuniLearner.Version"/> on every changed learner, so concurrent event handlers can't lose updates.</summary>
+    public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
+    {
+        foreach (var entry in ChangeTracker.Entries<MuniLearner>().Where(e => e.State == EntityState.Modified))
+        {
+            var version = entry.Property(l => l.Version);
+            version.CurrentValue = version.OriginalValue + 1;
+        }
+
+        return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+    }
+
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
         configurationBuilder.Properties<DateTime>().HaveConversion<UtcConverter>().HaveColumnType("datetime(6)");

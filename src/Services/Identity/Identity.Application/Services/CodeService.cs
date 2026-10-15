@@ -51,7 +51,9 @@ public sealed class CodeService(
     {
         var now = clock.GetUtcNow().UtcDateTime;
         var latest = await codes.FindLatestAsync(purpose, target, cancellationToken);
-        if (latest is not null && ((reuseUsable && latest.IsUsable(now)) || !latest.CanResend(now)))
+        // A used code ended its flow (e.g. sign-up, then the account was erased and the email signs up again): the
+        // resend window only guards a code still in play, including one locked by the hidden limit.
+        if (latest is not null && !latest.IsConsumed && ((reuseUsable && latest.IsUsable(now)) || !latest.CanResend(now)))
         {
             return new CodeChallenge(null, latest.SecondsUntilResend(now), latest.TriesLeft, latest.ValidForMinutes(now));
         }

@@ -91,7 +91,7 @@ class Client {
     const text = await res.text();
     let json = null;
     try { json = text ? JSON.parse(text) : null; } catch { /* not json */ }
-    return { status: res.status, body: json, text, ms: Date.now() - started, contentType: res.headers.get('content-type') || '' };
+    return { status: res.status, body: json, text, ms: Date.now() - started, contentType: res.headers.get('content-type') || '', headers: res.headers };
   }
 }
 

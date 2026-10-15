@@ -56,4 +56,37 @@ public sealed class CodeServiceTests
         var result = await h.Codes.VerifyAsync(CodePurpose.LoginPhone, Target, "123456", CancellationToken.None);
         Assert.Equal("code-expired", result.Error?.Code);
     }
+
+    [Fact]
+    public async Task A_used_code_does_not_hold_back_the_next_flow()
+    {
+        var h = new IdentityHarness();
+        await h.Codes.IssueAsync(CodePurpose.RegisterEmail, "asha@example.com", null, reuseUsable: false, CancellationToken.None);
+        Assert.True((await h.Codes.VerifyAsync(CodePurpose.RegisterEmail, "asha@example.com", "123456", CancellationToken.None)).IsSuccess);
+        h.Clock.Advance(TimeSpan.FromSeconds(5));
+        h.Generator.Code = "654321";
+
+        var next = await h.Codes.IssueAsync(CodePurpose.RegisterEmail, "asha@example.com", null, reuseUsable: false, CancellationToken.None);
+
+        Assert.Equal("654321", next.Value.CodeToSend);
+        Assert.Equal(30, next.Value.ResendIn);
+        Assert.True((await h.Codes.VerifyAsync(CodePurpose.RegisterEmail, "asha@example.com", "654321", CancellationToken.None)).IsSuccess);
+    }
+
+    [Fact]
+    public async Task A_code_locked_by_the_hidden_limit_still_waits_for_the_resend_window()
+    {
+        var h = new IdentityHarness();
+        await h.Codes.IssueAsync(CodePurpose.LoginPhone, Target, null, reuseUsable: false, CancellationToken.None);
+        for (var i = 0; i < 20; i++)
+        {
+            await h.Codes.VerifyAsync(CodePurpose.LoginPhone, Target, "000001", CancellationToken.None);
+        }
+
+        Assert.Equal("too-many-tries", (await h.Codes.VerifyAsync(CodePurpose.LoginPhone, Target, "123456", CancellationToken.None)).Error?.Code);
+        var early = await h.Codes.IssueAsync(CodePurpose.LoginPhone, Target, null, reuseUsable: false, CancellationToken.None);
+        Assert.Null(early.Value.CodeToSend);
+        h.Clock.Advance(TimeSpan.FromSeconds(31));
+        Assert.NotNull((await h.Codes.IssueAsync(CodePurpose.LoginPhone, Target, null, reuseUsable: false, CancellationToken.None)).Value.CodeToSend);
+    }
 }
