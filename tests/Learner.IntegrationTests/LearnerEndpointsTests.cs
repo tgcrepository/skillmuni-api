@@ -333,7 +333,7 @@ public sealed class LearnerEndpointsTests(LearnerApiFactory api)
             values = new
             {
                 skills = new[] { new { id = "excel", name = "MS Excel", level = 2 }, new { id = "sales", name = "Sales", level = 1 } },
-                trophies = new[] { new { name = "Excel cert", verified = true, skills = new[] { "excel" } } },
+                trophies = new[] { new { id = "t1", name = "Excel cert", issuer = "Microsoft", issuedOn = "2024-05", verified = true, linkedSkills = new[] { "excel" }, source = "manual" } },
             },
             done = false,
         });

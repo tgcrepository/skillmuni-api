@@ -22,6 +22,10 @@ internal static class JobProfileBuilder
 
     public const string NeverShown = "ID number, full address";
 
+    public const string InvitesOff = "Invites off";
+
+    private const int SignatureMoves = 3;
+
     private static readonly string[] RadarCategories = ["people", "business", "data", "creative", "tech"];
 
     /// <summary>Section → the quest step that collected it (job-profile.handlers.ts SOURCES).</summary>
@@ -46,7 +50,16 @@ internal static class JobProfileBuilder
         ["graduate"] = "Graduate",
         ["postgraduate"] = "Postgraduate",
         ["phd"] = "PhD",
-        ["matric"] = "Matric (NSC)",
+        ["grade9"] = "Grade 9",
+        ["matric"] = "Matric",
+        ["tvet"] = "TVET certificate",
+    };
+
+    /// <summary>South Africa's own names for two levels (education.ts LEVELS.ZA).</summary>
+    private static readonly Dictionary<string, string> ZaLevelLabels = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["graduate"] = "Bachelor's degree",
+        ["postgraduate"] = "Honours / Master's",
     };
 
     private static readonly Dictionary<string, string> LookingForLabels = new(StringComparer.OrdinalIgnoreCase)
@@ -55,9 +68,47 @@ internal static class JobProfileBuilder
         ["part_time"] = "Part-time",
         ["internship"] = "Internship",
         ["apprenticeship"] = "Apprenticeship",
+        ["learnership"] = "Learnership",
         ["freelance"] = "Freelance",
         ["short_course"] = "Short course",
     };
+
+    /// <summary>arc.ts SHIFTS.</summary>
+    private static readonly Dictionary<string, string> ShiftLabels = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["day"] = "Day",
+        ["night"] = "Night (US/UK shift)",
+        ["rotational"] = "Rotational",
+        ["weekends"] = "Weekends",
+    };
+
+    /// <summary>arc.ts NOTICE.ZA (India's values are a number of days).</summary>
+    private static readonly Dictionary<string, string> ZaNoticeLabels = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["7"] = "1 week",
+        ["14"] = "2 weeks",
+        ["30"] = "1 month",
+        ["60"] = "2 months +",
+    };
+
+    /// <summary>arc.ts SALARY: the options' own labels.</summary>
+    private static readonly Dictionary<string, string> SalaryLabels = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["IN:0-2"] = "₹0 – 2 LPA",
+        ["IN:2-3"] = "₹2 – 3 LPA",
+        ["IN:3-4.5"] = "₹3 – 4.5 LPA",
+        ["IN:4.5-6"] = "₹4.5 – 6 LPA",
+        ["IN:6-10"] = "₹6 – 10 LPA",
+        ["IN:10+"] = "₹10 LPA +",
+        ["ZA:0-5k"] = "R0 – R5 000 / month",
+        ["ZA:5-8k"] = "R5 000 – R8 000 / month",
+        ["ZA:8-12k"] = "R8 000 – R12 000 / month",
+        ["ZA:12-20k"] = "R12 000 – R20 000 / month",
+        ["ZA:20k+"] = "R20 000 + / month",
+    };
+
+    /// <summary>Quest 7 receipt keys (q7-receipts.ts): the highest education, timeline entries, trophies, work chapters.</summary>
+    private const string EduReceipt = "edu";
 
     public sealed record Input(
         LearnerProfile Learner,
@@ -75,31 +126,29 @@ internal static class JobProfileBuilder
         var lore = Answer(input, WorkLore);
         var arc = Answer(input, Arc);
         var vibe = Answer(input, VibeCheck);
+        var receipts = Answer(input, Receipts).Map("receipts");
 
         var skills = Skills(flex);
         var radar = Radar(flex);
-        var work = Work(lore, contact);
-        var schools = Education(education);
-        var certificates = Certificates(flex);
+        var work = Work(lore, contact, receipts);
+        var schools = Education(education, receipts, learner.Market);
+        var certificates = Certificates(flex, receipts);
         var verified = work.Count(w => w.Proof == "verified") + schools.Count(e => e.Proof == "verified") + certificates.Count(c => c.Status == "verified");
         var city = contact.Str("city");
         var roles = arc.Strings("roles");
 
+        // The deck's first three skills with a level are the signature moves (q4-deck.ts SIGNATURES, quest-page.ts).
         var signature = skills.Where(s => s.Signature).ToList();
-        if (signature.Count == 0)
-        {
-            signature = skills.Where(s => s.Power is > 0).OrderByDescending(s => s.Power).Take(3).ToList();
-        }
 
+        // Quest 8 "invites" (q8-vibe.ts): employers may invite by email, and by WhatsApp when Quest 2 opted in.
         var invites = new List<string>();
-        if (vibe.Bool("inviteEmail") ?? true)
+        if (vibe.Bool("invites") ?? true)
         {
             invites.Add("Email");
-        }
-
-        if (vibe.Bool("inviteWhatsapp") ?? vibe.Bool("inviteWhatsApp") ?? true)
-        {
-            invites.Add("WhatsApp");
+            if (contact.Bool("whatsapp") == true)
+            {
+                invites.Add("WhatsApp");
+            }
         }
 
         return new JobProfileDto(
@@ -118,8 +167,8 @@ internal static class JobProfileBuilder
                 ProfileFormat.MaskEmail(learner.Email ?? NullIfEmpty(contact.Str("email"))),
                 Location(contact, withPostal: true),
                 city,
-                vibe.Bool("discoverable") ?? vibe.Bool("findMe") ?? true,
-                string.Join(" · ", invites),
+                vibe.Bool("discoverable") ?? true,
+                invites.Count == 0 ? InvitesOff : string.Join(" · ", invites),
                 NeverShown),
             About(input, learner, schools, work, flex, arc, city),
             work,
@@ -135,11 +184,16 @@ internal static class JobProfileBuilder
             Sources);
     }
 
-    public static CvContactDto Contact(LearnerProfile learner, IReadOnlyDictionary<string, string> answers)
+    /// <summary>
+    /// The CV's contact block. The quests don't ask for LinkedIn, so it comes from the latest CV read (the CV pre-fill
+    /// of Quest 2) when the CV had one.
+    /// </summary>
+    public static CvContactDto Contact(LearnerProfile learner, IReadOnlyDictionary<string, string> answers, JobProfileSettings? settings = null)
     {
         var contact = QuestAnswerView.Parse(answers.GetValueOrDefault(HitMeUp));
         var arc = QuestAnswerView.Parse(answers.GetValueOrDefault(Arc));
-        var linkedin = contact.Str("linkedin", "linkedIn");
+        var cvContact = new QuestAnswerView(QuestAnswerView.Parse(settings?.CvPrefillJson).Raw[HitMeUp] as System.Text.Json.Nodes.JsonObject);
+        var linkedin = contact.Str("linkedin", "linkedIn") is { Length: > 0 } own ? own : cvContact.Str("linkedin", "linkedIn");
         return new CvContactDto(
             ProfileFormat.DisplayPhone(learner.Phone ?? NullIfEmpty(contact.Str("phone"))),
             learner.Email ?? contact.Str("email"),
@@ -267,17 +321,27 @@ internal static class JobProfileBuilder
         return lore.Items("chapters").FirstOrDefault()?.Str("role") ?? string.Empty;
     }
 
+    /// <summary>
+    /// Quest 4's deck in the learner's order (q4-deck.ts: drag to reorder, "top 3 are your signature moves"). A card
+    /// with level 0 has no level yet and can't be a signature move (quest-page.ts filters on the level).
+    /// </summary>
     private static List<SkillItemDto> Skills(QuestAnswerView flex)
     {
-        var signatureIds = flex.Strings("signature").ToHashSet(StringComparer.Ordinal);
+        var signatures = 0;
         return flex.Items("skills")
+            .Select(s => (Name: s.Str("name"), Level: s.Int("level")))
+            .Where(s => s.Name.Length > 0)
             .Select(s =>
             {
-                var level = s.Int("level");
-                var signature = s.Bool("signature") == true || (signatureIds.Count > 0 && signatureIds.Contains(s.Str("id")));
-                return new SkillItemDto(s.Str("name"), level is >= 1 and <= 3 ? level : null, signature);
+                var power = s.Level is >= 1 and <= 3 ? s.Level : (int?)null;
+                var signature = power is not null && signatures < SignatureMoves;
+                if (signature)
+                {
+                    signatures++;
+                }
+
+                return new SkillItemDto(s.Name, power, signature);
             })
-            .Where(s => s.Name.Length > 0)
             .ToList();
     }
 
@@ -313,32 +377,42 @@ internal static class JobProfileBuilder
         return scores.OrderByDescending(s => s.Score).First().Name;
     }
 
-    private static List<WorkItemDto> Work(QuestAnswerView lore, QuestAnswerView contact) =>
+    /// <summary>Quest 5 chapters (work.ts <c>Chapter</c>). A chapter has no city of its own, so Quest 2's city is shown.</summary>
+    private static List<WorkItemDto> Work(QuestAnswerView lore, QuestAnswerView contact, IReadOnlyDictionary<string, QuestAnswerView> receipts) =>
         lore.Items("chapters")
             .Select((c, i) =>
             {
                 var company = c.Str("company");
                 var description = c.Str("description");
+                var id = c.Str("id");
                 return new WorkItemDto(
-                    c.Str("id") is { Length: > 0 } id ? id : $"chapter-{i + 1}",
+                    id.Length > 0 ? id : $"chapter-{i + 1}",
                     Initials(company.Length > 0 ? company : c.Str("role")),
                     c.Str("role"),
                     company,
-                    c.Str("city") is { Length: > 0 } city ? city : contact.Str("city"),
+                    contact.Str("city"),
                     Period(c, withLength: true),
                     description.Length > 0 ? [description] : [],
-                    Proof(c));
+                    Proof(c, receipts, id.Length > 0 ? $"ch-{id}" : null));
             })
             .Where(w => w.Role.Length > 0)
             .ToList();
 
-    private static List<EducationItemDto> Education(QuestAnswerView education)
+    private static string LevelLabel(string level, string market) =>
+        market == "ZA" && ZaLevelLabels.TryGetValue(level, out var za) ? za : LevelLabels.GetValueOrDefault(level, level);
+
+    /// <summary>
+    /// Quest 3: the highest level (parts 1–2, q3-details.ts) and the optional timeline (education.ts
+    /// <c>TimelineEntry</c>): school levels with a board and, for 12th, a stream; courses by name; other
+    /// qualifications (<c>level: "education"</c>) by degree or level, with a specialisation.
+    /// </summary>
+    private static List<EducationItemDto> Education(QuestAnswerView education, IReadOnlyDictionary<string, QuestAnswerView> receipts, string market)
     {
         var items = new List<EducationItemDto>();
         var level = education.Str("level");
         if (level.Length > 0 && !string.Equals(level, "none", StringComparison.OrdinalIgnoreCase))
         {
-            var title = education.Str("degree") is { Length: > 0 } degree ? degree : LevelLabels.GetValueOrDefault(level, level);
+            var title = education.Str("degree") is { Length: > 0 } degree ? degree : LevelLabel(level, market);
             var branch = education.Str("branch");
             var school = education.Str("institute", "board");
             var detail = new List<string>();
@@ -362,15 +436,40 @@ internal static class JobProfileBuilder
                 branch.Length > 0 ? $"{title} · {branch}" : title,
                 school,
                 string.Join(" · ", detail),
-                Proof(education)));
+                Proof(education, receipts, EduReceipt)));
         }
 
         items.AddRange(education.Items("timeline").Select((t, i) =>
         {
-            var title = t.Str("degree", "title", "name", "course") is { Length: > 0 } name ? name : LevelLabels.GetValueOrDefault(t.Str("level"), t.Str("level"));
-            var school = t.Str("institute", "school", "board");
+            var entryLevel = t.Str("level");
+            var title = entryLevel switch
+            {
+                "course" => t.Str("name"),
+                "education" => t.Str("degree") is { Length: > 0 } degree ? degree : LevelLabel(t.Str("qual"), market),
+                _ => LevelLabel(entryLevel, market),
+            };
+            var extra = entryLevel switch
+            {
+                "course" => string.Empty,
+                "education" => t.Str("branch"),
+                _ => t.Str("stream"),
+            };
+            if (title.Length > 0 && extra.Length > 0)
+            {
+                title = $"{title} · {extra}";
+            }
+
+            // School levels show their board, like the design's "12th · Commerce (HSC) · Maharashtra State Board".
+            var school = entryLevel is "course" or "education" ? t.Str("institute") : t.Str("board", "institute");
             var detail = string.Join(" · ", new[] { t.Str("year"), Score(t) }.Where(x => x.Length > 0));
-            return new EducationItemDto($"timeline-{i + 1}", Initials(school.Length > 0 ? school : title), title, school, detail, Proof(t));
+            var id = t.Str("id");
+            return new EducationItemDto(
+                id.Length > 0 ? id : $"timeline-{i + 1}",
+                Initials(school.Length > 0 ? school : title),
+                title,
+                school,
+                detail,
+                Proof(t, receipts, id.Length > 0 ? $"tl-{id}" : null));
         }).Where(e => e.Title.Length > 0));
         return items;
     }
@@ -391,35 +490,43 @@ internal static class JobProfileBuilder
         };
     }
 
-    private static List<CertificateItemDto> Certificates(QuestAnswerView flex) =>
+    /// <summary>Quest 4 trophies (flex.ts <c>Trophy</c>): issued on YYYY-MM, shown as the year.</summary>
+    private static List<CertificateItemDto> Certificates(QuestAnswerView flex, IReadOnlyDictionary<string, QuestAnswerView> receipts) =>
         flex.Items("trophies")
             .Select((t, i) =>
             {
                 var issuer = t.Str("issuer");
-                var year = t.Str("year", "issuedOn", "issued");
+                var year = t.Str("issuedOn");
                 year = year.Length >= 4 ? year[..4] : year;
+                var id = t.Str("id");
+                var status = Proof(t, receipts, id.Length > 0 ? $"tr-{id}" : null);
                 return new CertificateItemDto(
-                    t.Str("id") is { Length: > 0 } id ? id : $"trophy-{i + 1}",
-                    t.Str("name", "title"),
+                    id.Length > 0 ? id : $"trophy-{i + 1}",
+                    t.Str("name"),
                     string.Join(" · ", new[] { issuer, year }.Where(x => x.Length > 0)),
-                    Proof(t),
-                    null);
+                    status,
+                    status == "checking" ? CheckingEta : null);
             })
             .Where(c => c.Title.Length > 0)
             .ToList();
 
+    /// <summary>q7-receipts.ts: "Checking · usually under 48 hours".</summary>
+    private const string CheckingEta = "48 h";
+
     /// <summary>
-    /// Proof status per item: verified when the item says so (a DigiLocker import, a checked receipt), checking while
-    /// a receipt awaits review, otherwise none. Receipts' own review flow is not built yet.
+    /// Proof status per item: verified when the item itself is (a DigiLocker import, a trophy whose credential link
+    /// was checked), else the status of its Quest 7 receipt (<c>checking</c> after an upload, <c>verified</c> once
+    /// reviewed), else none.
     /// </summary>
-    private static string Proof(QuestAnswerView item)
+    private static string Proof(QuestAnswerView item, IReadOnlyDictionary<string, QuestAnswerView> receipts, string? receiptKey)
     {
         if (item.Bool("verified") == true || string.Equals(item.Str("source"), "digilocker", StringComparison.OrdinalIgnoreCase))
         {
             return "verified";
         }
 
-        return item.Str("proof", "status").ToLowerInvariant() switch
+        var receipt = receiptKey is null ? null : receipts.GetValueOrDefault(receiptKey);
+        return receipt?.Str("status").ToLowerInvariant() switch
         {
             "verified" => "verified",
             "checking" => "checking",
@@ -469,10 +576,10 @@ internal static class JobProfileBuilder
             "remote" => "open to remote",
             _ => Humanise(w),
         })));
-        Add("Shifts", string.Join(" · ", arc.Strings("shifts").Select(Humanise)));
+        Add("Shifts", string.Join(" · ", arc.Strings("shifts").Select(s => ShiftLabels.GetValueOrDefault(s, Humanise(s)))));
         var notice = arc.Str("notice");
         var immediate = string.Equals(notice, "immediate", StringComparison.OrdinalIgnoreCase);
-        Add("Can join", immediate ? "Immediately" : Humanise(notice), immediate ? true : null);
+        Add("Can join", immediate ? "Immediately" : NoticeLabel(notice, market), immediate ? true : null);
         Add("Expected pay", ExpectedPay(arc.Str("salary"), market), isPrivate: true);
         return rows;
     }
@@ -577,9 +684,30 @@ internal static class JobProfileBuilder
             return string.Empty;
         }
 
+        if (SalaryLabels.TryGetValue($"{market}:{salary}", out var label))
+        {
+            return label;
+        }
+
         var parts = salary.Split('-', 2, StringSplitOptions.TrimEntries);
         var range = parts.Length == 2 ? $"{parts[0]} – {parts[1]}" : salary;
-        return market == "ZA" ? $"R{range}k a month" : $"₹{range} LPA";
+        return market == "ZA" ? $"R{range} / month" : $"₹{range} LPA";
+    }
+
+    /// <summary>arc.ts NOTICE: India counts days ("15" → "15 days"); South Africa has its own labels.</summary>
+    private static string NoticeLabel(string notice, string market)
+    {
+        if (notice.Length == 0)
+        {
+            return string.Empty;
+        }
+
+        if (market == "ZA" && ZaNoticeLabels.TryGetValue(notice, out var za))
+        {
+            return za;
+        }
+
+        return int.TryParse(notice, NumberStyles.Integer, CultureInfo.InvariantCulture, out var days) ? $"{days} days" : Humanise(notice);
     }
 
     private static string Period(QuestAnswerView chapter, bool withLength)

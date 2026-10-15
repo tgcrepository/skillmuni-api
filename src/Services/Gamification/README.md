@@ -82,3 +82,4 @@ Consumes (subscription `gamification`, filter in `deploy/bicep/main.bicep`): `id
 | `Gamification:Xp`, `Levels`, `Quests`, `DailyQuests`, `Arena`, `TimeZones`, `FoundingUntil`, `FeedbackXpEvery` | optional overrides |
 | `Gamification:Badges:AwardCatalogue` | `false` for launch (§4.3) |
 | `ServiceBus:Subscription` | `gamification` |
+| `ServiceBus:MaxConcurrentCalls` | `1`: one event at a time per replica, so two events for one learner never race on the player row (counters, totals, the feedback 30-day rule). Across replicas `players.version` is an optimistic concurrency token: the losing handler fails and its message is redelivered. |

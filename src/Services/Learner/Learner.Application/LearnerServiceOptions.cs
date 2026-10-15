@@ -44,6 +44,13 @@ public sealed class LearnerServiceOptions
 
     public JobProfileOptions JobProfile { get; set; } = new();
 
+    /// <summary>
+    /// Programme codes that exist in every tenant without a tenant admin creating them: the first lookup stores the
+    /// code for the caller's tenant. Empty by default; Development lists the two sample codes of
+    /// <c>programme.handlers.ts</c> so the app and the e2e run work on a fresh database.
+    /// </summary>
+    public List<SampleProgramme> SampleProgrammes { get; set; } = [];
+
     public IReadOnlyList<Quest> QuestCatalog() =>
         (Quests.Count > 0 ? Quests : QuestDefaults.All).Select(q => q.ToQuest()).ToList();
 
@@ -70,6 +77,32 @@ public sealed class XpRules
     public int ProfilePhoto { get; set; } = 5;
 
     public int ProfileSkills { get; set; } = 10;
+}
+
+/// <summary>A programme code from configuration (<see cref="LearnerServiceOptions.SampleProgrammes"/>).</summary>
+public sealed class SampleProgramme
+{
+    public string Code { get; set; } = string.Empty;
+
+    public string Name { get; set; } = string.Empty;
+
+    public string Partner { get; set; } = string.Empty;
+
+    public string Centre { get; set; } = string.Empty;
+
+    public DateOnly BatchStarts { get; set; }
+
+    public string Duration { get; set; } = string.Empty;
+
+    public string Stipend { get; set; } = string.Empty;
+
+    public string MarksFrom { get; set; } = "12";
+
+    public int MinEnglish { get; set; }
+
+    public int MinMaths { get; set; }
+
+    public string Eligibility { get; set; } = string.Empty;
 }
 
 public sealed class LevelStep
@@ -117,20 +150,21 @@ public sealed class QuestPartDefinition
 /// <summary>
 /// The 8 quests and 18 steps of BRD §3.3, badge names from §4.3. <c>Optional</c> marks the all-optional steps of
 /// BR-101 (they pay +20 only when something was added): backup contact, education timeline, trophy shelf, receipts.
-/// Step keys are the ones the quest screens use for <c>&lt;key&gt;Skipped</c>; override in config when they change.
+/// Step keys and labels are the quest screens' own (quest-defs.ts <c>PartDef.key</c>, used for <c>&lt;key&gt;Skipped</c>
+/// and the Job Profile's "left" steps); override in config when they change.
 /// </summary>
 public static class QuestDefaults
 {
     public static readonly IReadOnlyList<QuestDefinition> All =
     [
-        Q(1, "who-dis", "Who Dis?", "Main Character Badge", ("name", "Your name", false), ("identity", "ID & birthday", false), ("birthday", "The tea", false)),
-        Q(2, "hit-me-up", "Hit Me Up", "Link Up Badge", ("mobile", "Your digits", false), ("backup", "Backup contact", true), ("address", "Your spot", false)),
-        Q(3, "big-brain-stuff", "Big Brain Stuff", "Big Brain Badge", ("level", "Your level", false), ("details", "The details", false), ("timeline", "Timeline", true)),
-        Q(4, "your-flex-era", "Your Flex Era", "Player Card", ("skills", "Skill deck", false), ("languages", "Language passport", false), ("trophies", "Trophy shelf", true)),
-        Q(5, "work-lore", "Work Lore", "Storyteller Badge", ("types", "Work types", false), ("chapters", "Chapters", false), ("timeline", "Your timeline", false)),
+        Q(1, "who-dis", "Who Dis?", "Main Character Badge", ("name", "Your name", false), ("id", "ID & birthday", false), ("tea", "The tea", false)),
+        Q(2, "hit-me-up", "Hit Me Up", "Link Up Badge", ("digits", "Your digits", false), ("backup", "Backup contact", true), ("spot", "Your spot", false)),
+        Q(3, "big-brain-stuff", "Big Brain Stuff", "Big Brain Badge", ("level", "Your level", false), ("details", "The details", false), ("timeline", "Timeline · optional", true)),
+        Q(4, "your-flex-era", "Your Flex Era", "Player Card", ("deck", "Skill deck", false), ("passport", "Language passport", false), ("trophies", "Trophy shelf (optional)", true)),
+        Q(5, "work-lore", "Work Lore", "Storyteller Badge", ("types", "Work types", false), ("chapter", "Chapters", false), ("timeline", "Your timeline", false)),
         Q(6, "pick-your-arc", "Pick Your Arc", "Arc Badge", ("arc", "Your arc", false)),
         Q(7, "drop-the-receipts", "Drop the Receipts", "Receipts Badge", ("receipts", "Receipts", true)),
-        Q(8, "vibe-check", "Vibe Check", "Vibe Check Badge", ("review", "Vibe check", false)),
+        Q(8, "vibe-check", "Vibe Check", "Vibe Check Badge", ("vibe", "Vibe check", false)),
     ];
 
     public static readonly IReadOnlyList<string> SkillOptions =

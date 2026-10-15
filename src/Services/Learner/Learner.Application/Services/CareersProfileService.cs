@@ -50,6 +50,7 @@ public sealed class CareersProfileService(ILearnerRepository learners, IQuestAns
         var contact = Quest(JobProfileBuilder.HitMeUp);
         var flex = Quest(JobProfileBuilder.Flex);
         var arc = Quest(JobProfileBuilder.Arc);
+        var lore = Quest(JobProfileBuilder.WorkLore);
         var receipts = Quest(JobProfileBuilder.Receipts);
 
         // Quest 1's name, falling back to the learner's own (both kept in step by the quest save).
@@ -67,57 +68,51 @@ public sealed class CareersProfileService(ILearnerRepository learners, IQuestAns
             NullIfEmpty(name),
             masked == ProfileFormat.NotAdded ? null : masked,
             NullIfEmpty(contact.Str("city")),
-            NullIfEmpty(contact.Str("region", "state")),
+            NullIfEmpty(contact.Str("region")),
             Relocate(arc),
-            Skills(flex, receipts));
+            Skills(flex, lore, receipts));
     }
 
-    /// <summary>Pick Your Arc: an explicit <c>relocate</c> flag, else whether "relocate" is among the places; null when unanswered.</summary>
-    private static bool? Relocate(QuestAnswerView arc)
-    {
-        if (arc.Bool("relocate") is { } flag)
-        {
-            return flag;
-        }
-
-        if (!arc.Raw.ContainsKey("where"))
-        {
-            return null;
-        }
-
-        return arc.Strings("where").Contains("relocate", StringComparer.OrdinalIgnoreCase);
-    }
+    /// <summary>Pick Your Arc: whether "Open to relocating" is among the places (q6-arc.ts <c>where</c>); null when unanswered.</summary>
+    private static bool? Relocate(QuestAnswerView arc) =>
+        arc.Raw.ContainsKey("where") ? arc.Strings("where").Contains("relocate", StringComparer.OrdinalIgnoreCase) : null;
 
     /// <summary>
-    /// The Quest 4 deck. A skill is "verified" when its own entry is verified, or a verified proof names it: a trophy
-    /// (DigiLocker import or checked certificate) or a Quest 7 receipt whose <c>skills</c>/<c>skill</c> lists it.
+    /// The Quest 4 deck (skills.ts <c>DeckSkill</c>). A skill is "verified" when a verified proof is linked to it: a
+    /// verified trophy (DigiLocker import or checked credential link, or a verified <c>tr-&lt;id&gt;</c> receipt) through
+    /// its <c>linkedSkills</c>, or a work chapter with a verified <c>ch-&lt;id&gt;</c> receipt through its <c>skills</c>
+    /// (both hold deck skill ids). Quest 7 receipts are keyed by claim (q7-receipts.ts).
     /// </summary>
-    private static IReadOnlyList<CareersSkillDto> Skills(QuestAnswerView flex, QuestAnswerView receipts)
+    private static IReadOnlyList<CareersSkillDto> Skills(QuestAnswerView flex, QuestAnswerView lore, QuestAnswerView receipts)
     {
-        var proven = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var proof in flex.Items("trophies").Concat(receipts.Items("receipts")).Where(IsVerified))
+        var proofs = receipts.Map("receipts");
+        bool ReceiptVerified(string key) =>
+            proofs.TryGetValue(key, out var proof) && string.Equals(proof.Str("status"), Verified, StringComparison.OrdinalIgnoreCase);
+
+        var proven = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var trophy in flex.Items("trophies"))
         {
-            proven.UnionWith(proof.Strings("skills"));
-            if (proof.Str("skill") is { Length: > 0 } one)
+            var verified = trophy.Bool("verified") == true ||
+                string.Equals(trophy.Str("source"), "digilocker", StringComparison.OrdinalIgnoreCase) ||
+                ReceiptVerified($"tr-{trophy.Str("id")}");
+            if (verified)
             {
-                proven.Add(one);
+                proven.UnionWith(trophy.Strings("linkedSkills"));
             }
         }
 
+        foreach (var chapter in lore.Items("chapters").Where(c => ReceiptVerified($"ch-{c.Str("id")}")))
+        {
+            proven.UnionWith(chapter.Strings("skills"));
+        }
+
         return flex.Items("skills")
-            .Select(s => (Id: s.Str("id"), Name: s.Str("name"), Verified: IsVerified(s)))
+            .Select(s => (Id: s.Str("id"), Name: s.Str("name")))
             .Where(s => s.Name.Length > 0)
             .DistinctBy(s => s.Name, StringComparer.OrdinalIgnoreCase)
-            .Select(s => new CareersSkillDto(
-                s.Name,
-                s.Verified || proven.Contains(s.Name) || (s.Id.Length > 0 && proven.Contains(s.Id)) ? Verified : Declared))
+            .Select(s => new CareersSkillDto(s.Name, s.Id.Length > 0 && proven.Contains(s.Id) ? Verified : Declared))
             .ToList();
     }
-
-    private static bool IsVerified(QuestAnswerView item) =>
-        item.Bool("verified") == true ||
-        string.Equals(item.Str("source"), "digilocker", StringComparison.OrdinalIgnoreCase) ||
-        string.Equals(item.Str("proof", "status"), Verified, StringComparison.OrdinalIgnoreCase);
 
     private static string? NullIfEmpty(string value) => value.Length == 0 ? null : value;
 }

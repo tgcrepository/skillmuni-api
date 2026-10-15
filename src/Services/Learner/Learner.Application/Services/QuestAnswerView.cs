@@ -77,4 +77,10 @@ internal sealed class QuestAnswerView
 
     public IReadOnlyList<QuestAnswerView> Items(string key) =>
         _values[key] is JsonArray array ? array.OfType<JsonObject>().Select(o => new QuestAnswerView(o)).ToList() : [];
+
+    /// <summary>An object of objects keyed by id (Quest 7's <c>receipts</c>: <c>{ "ch-c1": { status, fileName, at } }</c>).</summary>
+    public IReadOnlyDictionary<string, QuestAnswerView> Map(string key) =>
+        _values[key] is JsonObject map
+            ? map.Where(p => p.Value is JsonObject).ToDictionary(p => p.Key, p => new QuestAnswerView((JsonObject)p.Value!), StringComparer.Ordinal)
+            : new Dictionary<string, QuestAnswerView>(StringComparer.Ordinal);
 }
