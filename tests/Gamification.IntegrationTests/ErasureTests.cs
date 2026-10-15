@@ -1,10 +1,10 @@
 using System.Net;
+using Gamification.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using SkillMuni.Common.Tenancy;
 using SkillMuni.Messaging.Erasure;
 using SkillMuni.Testing;
-using Gamification.Infrastructure.Persistence;
 
 namespace Gamification.IntegrationTests;
 

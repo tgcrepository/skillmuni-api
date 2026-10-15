@@ -1,10 +1,10 @@
 using System.Net;
+using Learning.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using SkillMuni.Common.Tenancy;
 using SkillMuni.Messaging.Erasure;
 using SkillMuni.Testing;
-using Learning.Infrastructure.Persistence;
 
 namespace Learning.IntegrationTests;
 

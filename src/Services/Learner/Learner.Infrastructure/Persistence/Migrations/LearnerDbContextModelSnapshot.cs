@@ -654,6 +654,21 @@ namespace Learner.Infrastructure.Persistence.Migrations
                     b.ToTable("trophy_files", (string)null);
                 });
 
+            modelBuilder.Entity("SkillMuni.Messaging.Erasure.ErasedLearner", b =>
+                {
+                    b.Property<Guid>("LearnerId")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("learner_id");
+
+                    b.Property<DateTime>("ErasedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("erased_at");
+
+                    b.HasKey("LearnerId");
+
+                    b.ToTable("erased_learners", (string)null);
+                });
+
             modelBuilder.Entity("SkillMuni.Messaging.Inbox.InboxMessage", b =>
                 {
                     b.Property<Guid>("Id")
