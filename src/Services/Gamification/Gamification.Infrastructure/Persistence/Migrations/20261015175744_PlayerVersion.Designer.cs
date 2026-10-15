@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Gamification.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(GamificationDbContext))]
-    [Migration("20261015192538_ErasureTombstones")]
-    partial class ErasureTombstones
+    [Migration("20261015175744_PlayerVersion")]
+    partial class PlayerVersion
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -296,9 +296,13 @@ namespace Gamification.Infrastructure.Persistence.Migrations
                         .HasColumnName("total_xp");
 
                     b.Property<DateTime>("UpdatedAt")
-                        .IsConcurrencyToken()
                         .HasColumnType("datetime(6)")
                         .HasColumnName("updated_at");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("int")
+                        .HasColumnName("version");
 
                     b.HasKey("Id");
 
@@ -357,21 +361,6 @@ namespace Gamification.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("ux_xp_entries_reason");
 
                     b.ToTable("xp_entries", (string)null);
-                });
-
-            modelBuilder.Entity("SkillMuni.Messaging.Erasure.ErasedLearner", b =>
-                {
-                    b.Property<Guid>("LearnerId")
-                        .HasColumnType("char(36)")
-                        .HasColumnName("learner_id");
-
-                    b.Property<DateTime>("ErasedAt")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("erased_at");
-
-                    b.HasKey("LearnerId");
-
-                    b.ToTable("erased_learners", (string)null);
                 });
 
             modelBuilder.Entity("SkillMuni.Messaging.Inbox.InboxMessage", b =>

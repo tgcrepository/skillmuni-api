@@ -32,6 +32,18 @@ jobs:
       - name: Start the stack
         run: docker compose up -d
 
+      - name: Wait for the Service Bus emulator
+        run: |
+          # The emulator creates its topics and queues after the container starts; a request that publishes before
+          # then gets MessagingEntityNotFound (seen as 503 notifications-unavailable on sign-up). Not fatal here.
+          for i in $(seq 1 60); do
+            if docker compose logs servicebus 2>/dev/null | grep -q "Emulator Service is Successfully Up"; then
+              echo "Service Bus emulator up after $((i*5)) s"; exit 0
+            fi
+            sleep 5
+          done
+          echo "Service Bus emulator not confirmed up; continuing"; docker compose logs --no-color --tail=40 servicebus
+
       - name: Wait for every service
         run: |
           # Probe each service's /health/ready from inside the compose network (the gateway answers 401 before proxying).

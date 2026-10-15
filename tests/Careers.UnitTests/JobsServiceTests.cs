@@ -131,6 +131,24 @@ public sealed class JobsServiceTests
     }
 
     [Fact]
+    public async Task Applied_tab_sorts_by_recent_update_or_date_applied()
+    {
+        var cv = await _h.UploadCvAsync();
+        var request = new ApplyRequest(cv.Id.ToString(), null, null);
+        var first = (await _h.Jobs.ApplyAsync(_h.Me, "job-1", request, None)).Value;
+        _h.Time.Advance(TimeSpan.FromDays(1));
+        var second = (await _h.Jobs.ApplyAsync(_h.Me, "job-2", request, None)).Value;
+        _h.Time.Advance(TimeSpan.FromDays(1));
+        await _h.Jobs.WithdrawAsync(_h.Me, first.Id, None);
+
+        var updated = await _h.Jobs.ApplicationsAsync(_h.Me, Query(sort: "updated"), None);
+        Assert.Equal(new[] { first.Id, second.Id }, updated.Items.Select(a => a.Id));
+
+        var newest = await _h.Jobs.ApplicationsAsync(_h.Me, Query(sort: "newest"), None);
+        Assert.Equal(new[] { second.Id, first.Id }, newest.Items.Select(a => a.Id));
+    }
+
+    [Fact]
     public async Task Offers_cannot_be_withdrawn()
     {
         var offer = JobApplication.FestOffer(CareersHarness.Tenant, _h.Me, "job-1", "Voice Process Exec", "tech-bpo-pune:tp", "CV", _h.Time.GetUtcNow().UtcDateTime, _h.Time.GetUtcNow().UtcDateTime);

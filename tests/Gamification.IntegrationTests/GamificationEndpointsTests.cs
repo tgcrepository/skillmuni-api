@@ -77,6 +77,9 @@ public sealed class GamificationEndpointsTests(GamificationApiFactory api)
         Assert.True(leaderRow.GetProperty("rank").GetInt32() < myRow.GetProperty("rank").GetInt32());
         Assert.Equal(myRow.GetProperty("rank").GetInt32(), board.GetProperty("me").GetProperty("rank").GetInt32());
         Assert.False(board.TryGetProperty("streakBonus", out _));
+
+        // arena.api.ts `photo?: string`: left out, never null, when the player has no photo.
+        Assert.False(myRow.TryGetProperty("photo", out _));
         Assert.Equal(0, board.GetProperty("rewards").GetProperty("coins").GetInt32());
         Assert.Equal(JsonValueKind.Null, board.GetProperty("rewards").GetProperty("voucher").ValueKind);
 
@@ -153,25 +156,28 @@ public sealed class GamificationEndpointsTests(GamificationApiFactory api)
     }
 
     [Fact]
-    public async Task Two_updates_of_one_player_at_once_cannot_overwrite_each_other()
+    public async Task Two_writers_of_one_player_cannot_lose_an_update()
     {
-        var me = await api.JoinAsync("Race", "Condition");
-
+        // Events for one learner are handled in parallel; the second writer must fail (and its event be redelivered)
+        // instead of overwriting the first one's totals.
+        var me = await api.JoinAsync("Yash", "Pohare");
         await using var first = api.Services.CreateAsyncScope();
         await using var second = api.Services.CreateAsyncScope();
         first.ServiceProvider.GetRequiredService<TenantOverride>().Set(TestTokens.Tenant);
         second.ServiceProvider.GetRequiredService<TenantOverride>().Set(TestTokens.Tenant);
-        var a = first.ServiceProvider.GetRequiredService<GamificationDbContext>();
-        var b = second.ServiceProvider.GetRequiredService<GamificationDbContext>();
-        var playerA = await a.Players.SingleAsync(p => p.Id == me);
-        var playerB = await b.Players.SingleAsync(p => p.Id == me);
+        var db1 = first.ServiceProvider.GetRequiredService<GamificationDbContext>();
+        var db2 = second.ServiceProvider.GetRequiredService<GamificationDbContext>();
+        var p1 = await db1.Players.SingleAsync(p => p.Id == me);
+        var p2 = await db2.Players.SingleAsync(p => p.Id == me);
 
-        playerA.Count("quests.done.work-lore", 1, DateTime.UtcNow);
-        await a.SaveChangesAsync();
-        playerB.Count("quests.done.pick-your-arc", 1, DateTime.UtcNow.AddSeconds(1));
+        p1.AddXp(10, DateTime.UtcNow);
+        await db1.SaveChangesAsync();
+        p2.AddXp(5, DateTime.UtcNow);
+        await Assert.ThrowsAsync<DbUpdateConcurrencyException>(() => db2.SaveChangesAsync());
 
-        // The loser fails (its event is retried and re-reads the player) instead of dropping the first counter.
-        await Assert.ThrowsAsync<DbUpdateConcurrencyException>(() => b.SaveChangesAsync());
+        await using var check = api.Services.CreateAsyncScope();
+        check.ServiceProvider.GetRequiredService<TenantOverride>().Set(TestTokens.Tenant);
+        Assert.Equal(10, (await check.ServiceProvider.GetRequiredService<GamificationDbContext>().Players.AsNoTracking().SingleAsync(p => p.Id == me)).TotalXp);
     }
 
     [Fact]

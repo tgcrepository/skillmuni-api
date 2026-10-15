@@ -9,9 +9,11 @@ const contract = JSON.parse(fs.readFileSync(path.join(__dirname, 'contract.json'
 /** Find the contract entry for a call, matching the frontend path template (`{x}` = any segment). */
 function contractFor(verb, apiPath) {
   const clean = apiPath.split('?')[0];
-  return contract.find(c => c.verb === verb && c.path && new RegExp(
+  // The most specific template wins: `fests/bookings` is not `fests/{id}`.
+  const params = c => (c.path.replace(/^\{apiBaseUrl\}\//, '').match(/\{/g) || []).length;
+  return contract.filter(c => c.verb === verb && c.path && new RegExp(
     '^' + c.path.replace(/^\{apiBaseUrl\}\//, '').replace(/[.*+?^$()|[\]\\]/g, '\\$&').replace(/\\?\{[^}]+\\?\}/g, '[^/]+') + '$',
-  ).test(clean));
+  ).test(clean)).sort((a, b) => params(a) - params(b))[0];
 }
 
 /** Validate `value` against a schema produced by extract-contract.js. Returns a list of problems. */

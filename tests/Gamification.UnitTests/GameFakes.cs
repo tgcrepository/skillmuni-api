@@ -116,6 +116,9 @@ public sealed class GameStore :
         return Task.FromResult<(BoardRow, int)?>(index < 0 ? null : (board[index], index + 1));
     }
 
+    public Task<int> CountAsync(DateTime? since, IReadOnlyCollection<Guid>? only, CancellationToken cancellationToken) =>
+        Task.FromResult(Board(since, null, only).Count);
+
     public Task EraseAsync(Guid learnerId, CancellationToken cancellationToken)
     {
         Players.RemoveAll(p => p.Id == learnerId);

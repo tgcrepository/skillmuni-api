@@ -375,6 +375,23 @@ public sealed class StatsAndArenaTests
     }
 
     [Fact]
+    public async Task A_learner_without_xp_still_sees_themself_and_friends_without_xp_are_listed()
+    {
+        var leader = await PlayerWithXpAsync("Ananya Iyer", 120);
+        var me = await _h.JoinAsync("Yash Pohare");
+        var friend = await _h.JoinAsync("Kabir Nair");
+
+        var board = (await _h.Arena().BoardAsync(me, "everyone", "week", _ct)).Value;
+        Assert.Equal(new[] { leader.ToString(), me.ToString() }, board.Players.Select(p => p.Id));
+        Assert.Equal((2, 0, "Ananya Iyer", 120), (board.Me.Rank, board.Me.Xp, board.Me.NextName, board.Me.NextXp));
+
+        await _h.Arena().CheerAsync(me, friend, true, _ct);
+        var friends = (await _h.Arena().BoardAsync(me, "friends", "week", _ct)).Value;
+        Assert.Equal(new[] { (friend.ToString(), 1, true), (me.ToString(), 2, false) }, friends.Players.Select(p => (p.Id, p.Rank, p.Cheered)));
+        Assert.True(friends.Players[1].You);
+    }
+
+    [Fact]
     public async Task Passing_someone_shows_rank_up_once()
     {
         var kabir = await PlayerWithXpAsync("Kabir Nair", 100);

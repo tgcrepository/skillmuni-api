@@ -89,6 +89,9 @@ public interface IBoardQueries
 
     /// <summary>The learner's row and 1-based rank, or null when they earned nothing in the window.</summary>
     Task<(BoardRow Row, int Rank)?> RankOfAsync(Guid learnerId, DateTime? since, IReadOnlyCollection<Guid>? only, CancellationToken cancellationToken);
+
+    /// <summary>How many learners earned XP in the window.</summary>
+    Task<int> CountAsync(DateTime? since, IReadOnlyCollection<Guid>? only, CancellationToken cancellationToken);
 }
 
 /// <summary>MISS-08 erasure: every row this service holds for one learner. Safe to run twice.</summary>
