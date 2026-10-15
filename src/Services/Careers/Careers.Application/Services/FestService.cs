@@ -204,7 +204,7 @@ public sealed partial class FestService(
             for (var k = i + 1; k < final.Count; k++)
             {
                 if (final[i].Date == final[k].Date
-                    && Math.Abs((FestViews.ParseTime(final[i].Time) - FestViews.ParseTime(final[k].Time)).TotalMinutes) < gap)
+                    && Math.Abs((FestViews.ParseTime(final[i].Time).ToTimeSpan() - FestViews.ParseTime(final[k].Time).ToTimeSpan()).TotalMinutes) < gap)
                 {
                     return CareersErrors.SlotOverlap;
                 }

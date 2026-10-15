@@ -7,7 +7,6 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Time.Testing;
 using SkillMuni.Common.Tenancy;
 using SkillMuni.Messaging.Inbox;
 using SkillMuni.Testing;
@@ -36,7 +35,7 @@ public sealed class CareersApiFactory : WebApplicationFactory<Program>, IAsyncLi
     public StubLearners Learners { get; } = new();
 
     /// <summary>The service's clock. A test that moves it puts it back to <see cref="Today"/> when done.</summary>
-    public FakeTimeProvider Clock { get; } = new(Today);
+    public SettableClock Clock { get; } = new(Today);
 
     public async Task InitializeAsync() => await _mysql.StartAsync();
 
@@ -80,6 +79,16 @@ public sealed class CareersApiFactory : WebApplicationFactory<Program>, IAsyncLi
             services.AddSingleton<ILearnerDirectory>(Learners);
         });
     }
+}
+
+/// <summary>A clock tests can set forwards and back (the fake from TimeProvider.Testing only moves forwards).</summary>
+public sealed class SettableClock(DateTimeOffset start) : TimeProvider
+{
+    private DateTimeOffset _now = start;
+
+    public override DateTimeOffset GetUtcNow() => _now;
+
+    public void SetUtcNow(DateTimeOffset value) => _now = value;
 }
 
 /// <summary>What Learner answers for each learner (unknown learners: no profile yet, skills unknown).</summary>
