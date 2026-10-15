@@ -3,6 +3,7 @@ using Careers.Domain;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SkillMuni.Common.Tenancy;
+using SkillMuni.Messaging.Erasure;
 using SkillMuni.Messaging.Inbox;
 using SkillMuni.Messaging.Outbox;
 
@@ -65,6 +66,7 @@ public sealed class CareersDbContext : DbContext, IUnitOfWork
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(CareersDbContext).Assembly);
         modelBuilder.AddOutbox();
         modelBuilder.AddInbox();
+        modelBuilder.AddErasureTombstones();
 
         modelBuilder.Entity<CareerLearner>().HasQueryFilter(e => e.TenantId == CurrentTenantId);
         modelBuilder.Entity<SavedJob>().HasQueryFilter(e => e.TenantId == CurrentTenantId);

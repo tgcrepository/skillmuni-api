@@ -141,10 +141,10 @@ public sealed class ArenaService(
                 rankUp = new RankUpDto(you.Rank, PlayerViews.FirstName(passed.Name));
             }
 
+            // Its own single-column UPDATE: the read must never fail on a concurrent event saving this player.
             if (stored.LastSeenRank != you.Rank)
             {
-                stored.SawRank(you.Rank);
-                await unitOfWork.SaveChangesAsync(cancellationToken);
+                await players.RememberSeenRankAsync(learnerId, you.Rank, cancellationToken);
             }
         }
 

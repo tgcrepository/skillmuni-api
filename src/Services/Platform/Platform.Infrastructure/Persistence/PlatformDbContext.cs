@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Platform.Application;
 using Platform.Domain;
 using SkillMuni.Common.Tenancy;
+using SkillMuni.Messaging.Erasure;
 using SkillMuni.Messaging.Inbox;
 using SkillMuni.Messaging.Outbox;
 
@@ -45,6 +46,7 @@ public sealed class PlatformDbContext : DbContext, IUnitOfWork
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(PlatformDbContext).Assembly);
         modelBuilder.AddOutbox();
         modelBuilder.AddInbox();
+        modelBuilder.AddErasureTombstones();
 
         modelBuilder.Entity<TenantTheme>().HasQueryFilter(e => e.TenantId == CurrentTenantId);
         modelBuilder.Entity<Notification>().HasQueryFilter(e => e.TenantId == CurrentTenantId);

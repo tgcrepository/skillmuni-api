@@ -5,7 +5,7 @@ namespace Careers.Application;
 // ---- Published (docs/EVENTS.md) ----
 
 /// <summary>Gamification pays +100 on the first one (BR-111, key <c>mission:first-application</c>).</summary>
-public sealed record ApplicationSent(Guid LearnerId, Guid ApplicationId, string JobId) : IntegrationEvent
+public sealed record ApplicationSent(Guid LearnerId, Guid ApplicationId, string JobId) : IntegrationEvent, ILearnerEvent
 {
     public const string Name = "careers.application.sent";
 
@@ -13,7 +13,7 @@ public sealed record ApplicationSent(Guid LearnerId, Guid ApplicationId, string 
 }
 
 /// <summary>Un-ticks the mission when it was the last active application; XP stays (BR-115).</summary>
-public sealed record ApplicationWithdrawn(Guid LearnerId, Guid ApplicationId) : IntegrationEvent
+public sealed record ApplicationWithdrawn(Guid LearnerId, Guid ApplicationId) : IntegrationEvent, ILearnerEvent
 {
     public const string Name = "careers.application.withdrawn";
 
@@ -21,14 +21,14 @@ public sealed record ApplicationWithdrawn(Guid LearnerId, Guid ApplicationId) : 
 }
 
 /// <summary>Gamification pays +100 on the first one (BR-112, key <c>mission:first-fest-booking</c>).</summary>
-public sealed record FestBooked(Guid LearnerId, Guid BookingId, string FestId) : IntegrationEvent
+public sealed record FestBooked(Guid LearnerId, Guid BookingId, string FestId) : IntegrationEvent, ILearnerEvent
 {
     public const string Name = "careers.fest.booked";
 
     public override string EventType => Name;
 }
 
-public sealed record FestCancelled(Guid LearnerId, Guid BookingId) : IntegrationEvent
+public sealed record FestCancelled(Guid LearnerId, Guid BookingId) : IntegrationEvent, ILearnerEvent
 {
     public const string Name = "careers.fest.cancelled";
 
@@ -43,25 +43,27 @@ public sealed record AssessmentSubmitted(
     bool FirstAttempt,
     string ArchetypeName,
     string ArchetypeSummary,
-    IReadOnlyList<string>? TopDrivers) : IntegrationEvent
+    IReadOnlyList<string>? TopDrivers) : IntegrationEvent, ILearnerEvent
 {
     public const string Name = "assessment.attempt.submitted";
 
     public override string EventType => Name;
 }
 
-public sealed record JobProfileCompleted(Guid LearnerId) : IntegrationEvent
+public sealed record JobProfileCompleted(Guid LearnerId) : IntegrationEvent, ILearnerEvent
 {
     public const string Name = "learner.job-profile.completed";
 
     public override string EventType => Name;
 }
 
-public sealed record ClaimConfirmed(Guid ClaimId, Guid AccountId) : IntegrationEvent
+public sealed record ClaimConfirmed(Guid ClaimId, Guid AccountId) : IntegrationEvent, ILearnerEvent
 {
     public const string Name = "identity.claim.confirmed";
 
     public override string EventType => Name;
+
+    Guid ILearnerEvent.LearnerId => AccountId;
 }
 
 public sealed record AccountErased(Guid AccountId) : IntegrationEvent

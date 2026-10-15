@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using SkillMuni.Common.Messaging;
+using SkillMuni.Common.Privacy;
 
 namespace SkillMuni.Messaging.Inbox;
 
@@ -25,11 +26,21 @@ public sealed class EventHandlerRegistry
         where TEvent : IntegrationEvent
         where THandler : IIntegrationEventHandler<TEvent>
     {
-        _handlers[eventType] = (services, body, cancellationToken) =>
+        _handlers[eventType] = async (services, body, cancellationToken) =>
         {
             var integrationEvent = JsonSerializer.Deserialize<TEvent>(body, Json)
                 ?? throw new JsonException($"Empty body for {eventType}.");
-            return services.GetRequiredService<THandler>().HandleAsync(integrationEvent, cancellationToken);
+
+            // MISS-08: an event about a learner who has since erased their account is recorded (inbox) and skipped,
+            // so a late event can't rebuild their rows.
+            if (integrationEvent is ILearnerEvent learnerEvent
+                && services.GetService<IErasureTombstones>() is { } tombstones
+                && await tombstones.IsErasedAsync(learnerEvent.LearnerId, cancellationToken))
+            {
+                return;
+            }
+
+            await services.GetRequiredService<THandler>().HandleAsync(integrationEvent, cancellationToken);
         };
     }
 

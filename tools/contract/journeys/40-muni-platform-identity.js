@@ -359,15 +359,28 @@ module.exports = async (ctx, j) => {
     check(Array.isArray(gm.body) && gm.body.length === 0, 'GET muni/history (erased)', `chat history should be gone: ${gm.text.slice(0, 120)}`);
     const gw = await ghost.call('GET', 'muni/welcome');
     check(!(gw.text || '').includes('Kumar') && !(gw.body?.intro || '').includes(', 5 XP'), 'GET muni/welcome (erased)', `Muni still knows the learner: ${gw.text.slice(0, 160)}`);
-    const gx = await poll(() => ghost.call('GET', 'me/progress'), x => x.status === 404 || x.status === 410 || x.body?.xp === 0);
-    check(gx.status === 404 || gx.status === 410 || gx.body?.xp === 0, 'GET me/progress (erased)', `XP should be gone: ${gx.status} ${gx.text.slice(0, 120)}`);
-    // Learner re-creates an empty profile from a still-valid token's claims (open item: tombstone → 410
-    // learner-erased); what matters here is that nothing from before the erasure survives.
+    // Every service that builds a learner's rows on first use keeps a tombstone: the still-valid token gets 410
+    // learner-erased (or 401) — never 200 with a fresh, empty profile — and it stays that way.
+    const erasedOk = x => x.status === 401 || (x.status === 410 && codeOf(x) === 'learner-erased');
+    for (const [service, path] of [
+      ['learner', 'profile'],
+      ['assessment', 'assessments/career'],
+      ['learning', 'learn/modules/brain-vita'],
+      ['careers', 'fests/summary'],
+      ['gamification', 'me/progress'],
+      ['platform', 'me/notification-preferences'],
+    ]) {
+      // Asserted with check (not r.record): some of these GETs aren't frontend calls (e.g. notification preferences).
+      const first = await poll(() => ghost.call('GET', path), erasedOk);
+      check(erasedOk(first), `GET ${path} (erased)`, `${service} should answer 410 learner-erased or 401, got ${first.status} ${codeOf(first)}: ${first.text.slice(0, 160)}`);
+      check(!first.text.includes('Kumar') && !first.text.includes(ravi.email), `GET ${path} (erased)`, `old personal details survived: ${first.text.slice(0, 200)}`);
+    }
+    // Asked again a moment later (late events delivered meanwhile): still gone, nothing recreated.
     await sleep(3000);
-    const gp = r.record(j, 'GET', 'profile', await ghost.call('GET', 'profile'), [200, 404, 410], 'erased learner, token minted before erasure');
-    check(!gp.text.includes('Kumar') && !gp.text.includes(ravi.email), 'GET profile (erased)', `old personal details survived: ${gp.text.slice(0, 200)}`);
-    const gn = await ghost.call('GET', 'me/notification-preferences');
-    check(gn.status !== 200 || JSON.stringify(gn.body) === JSON.stringify({ push: true, whatsApp: false, sms: false, email: true }), 'GET me/notification-preferences (erased)', `preferences should be back to defaults: ${gn.text}`);
+    for (const path of ['profile', 'me/progress', 'me/notification-preferences', 'fests/summary']) {
+      const again = await ghost.call('GET', path);
+      check(erasedOk(again), `GET ${path} (erased, again)`, `the learner came back: ${again.status} ${again.text.slice(0, 160)}`);
+    }
   }
   const again2 = new Client(ctx.base, 'Ravi again');
   r.record(j, 'POST', 'auth/register', await again2.call('POST', 'auth/register', { firstName: 'Ravi', lastName: 'Kumar', email: ravi.email, password: 'Skillmuni123', consent: true }), 200, 'same email after erasure');

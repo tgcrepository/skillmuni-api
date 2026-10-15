@@ -53,3 +53,14 @@ None in clear. `notification_deliveries.recipient` is masked (`***3210`, `y***@g
 | `Platform:Notifications:QueueEnabled` | true (the consumer starts only when Service Bus is configured) |
 | `ServiceBus:Subscription` · `NotificationsQueue` | `platform` · `notifications` |
 | `Redis:Host` or `ConnectionStrings:Redis` | theme and postal cache; memory if neither |
+
+## Erasure tombstone (MISS-08)
+
+On `identity.learner.erased` the learner's rows are deleted and a tombstone stays in `erased_learners`
+(`learner_id`, `erased_at` — nothing else, no tenant, no personal data; shared building block
+`AddErasureTombstones<TContext>()`). An access token stays valid for up to 10 minutes after erasure, so:
+
+- every request from an erased account gets **410 `learner-erased`** (`ErasedAccountMiddleware`, SkillMuni.Web) instead
+  of recreating an empty row;
+- an event about an erased learner (any event implementing `ILearnerEvent`) delivered late is recorded in the inbox and
+  skipped.

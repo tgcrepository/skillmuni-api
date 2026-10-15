@@ -20,6 +20,14 @@ internal sealed partial class LearnerProfileProgressClient(HttpClient http, ITen
             using var request = new HttpRequestMessage(HttpMethod.Get, $"internal/learners/{learnerId}/profile-progress");
             request.Headers.Add(TenancyOptions.TenantHeader, tenant.TenantId);
             using var response = await http.SendAsync(request, cancellationToken);
+
+            // No profile yet (404) or an erased account still holding a valid token (410 learner-erased): an
+            // expected answer, not an outage, so no warning.
+            if (response.StatusCode is System.Net.HttpStatusCode.NotFound or System.Net.HttpStatusCode.Gone)
+            {
+                return null;
+            }
+
             response.EnsureSuccessStatusCode();
             return await response.Content.ReadFromJsonAsync<ProfileProgress>(cancellationToken);
         }

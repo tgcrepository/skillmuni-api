@@ -2,6 +2,7 @@ using Careers.Application.Abstractions;
 using Careers.Application.Services;
 using Microsoft.Extensions.Logging;
 using SkillMuni.Common.Messaging;
+using SkillMuni.Common.Privacy;
 using SkillMuni.Common.Storage;
 
 namespace Careers.Application.Handlers;
@@ -47,6 +48,7 @@ public sealed partial class AccountErasedHandler(
     ICvFileRepository cvFiles,
     IBlobStore blobs,
     ICareersDataEraser eraser,
+    IErasureTombstones tombstones,
     ILogger<AccountErasedHandler> logger) : IIntegrationEventHandler<AccountErased>
 {
     public async Task HandleAsync(AccountErased e, CancellationToken cancellationToken)
@@ -58,6 +60,7 @@ public sealed partial class AccountErasedHandler(
         }
 
         await eraser.EraseAsync(e.AccountId, cancellationToken);
+        await tombstones.MarkErasedAsync(e.AccountId, cancellationToken);
         LogErased(logger, e.AccountId, files.Count);
     }
 

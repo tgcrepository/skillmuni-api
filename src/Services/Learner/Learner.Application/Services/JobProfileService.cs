@@ -114,12 +114,8 @@ public sealed class JobProfileService(
             .ToList();
         foreach (var group in toApply.GroupBy(c => c.Slug, StringComparer.Ordinal))
         {
-            var record = await answers.FindAsync(who.Id, group.Key, cancellationToken);
-            if (record is null)
-            {
-                record = QuestAnswers.Start(tenant.TenantId, who.Id, group.Key, now);
-                answers.Add(record);
-            }
+            var record = await answers.FindAsync(who.Id, group.Key, cancellationToken)
+                ?? await answers.GetOrCreateAsync(QuestAnswers.Start(tenant.TenantId, who.Id, group.Key, now), cancellationToken);
 
             var json = JsonNode.Parse(record.AnswersJson) as JsonObject ?? new JsonObject();
             foreach (var change in group)
@@ -172,15 +168,9 @@ public sealed class JobProfileService(
 
     private async Task<JobProfileSettings> SettingsAsync(LearnerProfile learner, CancellationToken cancellationToken)
     {
-        var settings = await jobProfiles.FindAsync(learner.Id, cancellationToken);
-        if (settings is null)
-        {
-            settings = JobProfileSettings.Create(tenant.TenantId, learner.Id, ShareCodes.New(), Now);
-            jobProfiles.Add(settings);
-            await unitOfWork.SaveChangesAsync(cancellationToken);
-        }
-
-        return settings;
+        // Created on first use; insert-if-absent so a parallel request or cv.parse.completed can't hit the unique key.
+        return await jobProfiles.FindAsync(learner.Id, cancellationToken)
+            ?? await jobProfiles.GetOrCreateAsync(JobProfileSettings.Create(tenant.TenantId, learner.Id, ShareCodes.New(), Now), cancellationToken);
     }
 
     private async Task<JobProfileDto> BuildAsync(LearnerProfile learner, JobProfileSettings settings, CancellationToken cancellationToken)

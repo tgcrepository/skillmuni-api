@@ -11,7 +11,7 @@ public sealed record LearnerErased(Guid AccountId) : IntegrationEvent
     public override string EventType => Name;
 }
 
-public sealed record BadgeEarned(Guid LearnerId, string BadgeId, string BadgeName) : IntegrationEvent
+public sealed record BadgeEarned(Guid LearnerId, string BadgeId, string BadgeName) : IntegrationEvent, ILearnerEvent
 {
     public const string Name = "gamification.badge.earned";
 

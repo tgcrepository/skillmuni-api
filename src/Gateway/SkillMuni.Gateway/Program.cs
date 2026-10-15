@@ -71,6 +71,7 @@ app.UseRateLimiter();
 app.UseMiddleware<TenantResolutionMiddleware>();
 app.UseMiddleware<SessionRefreshMiddleware>();
 app.UseAuthentication();
+app.UseMiddleware<AccountRateLimitMiddleware>();
 app.UseAuthorization();
 
 if (app.Environment.IsDevelopment())

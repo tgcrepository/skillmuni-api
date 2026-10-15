@@ -83,3 +83,20 @@ Consumes (subscription `gamification`, filter in `deploy/bicep/main.bicep`): `id
 | `Gamification:Badges:AwardCatalogue` | `false` for launch (§4.3) |
 | `ServiceBus:Subscription` | `gamification` |
 | `ServiceBus:MaxConcurrentCalls` | `1`: one event at a time per replica, so two events for one learner never race on the player row (counters, totals, the feedback 30-day rule). Across replicas `players.version` is an optimistic concurrency token: the losing handler fails and its message is redelivered. |
+
+## Erasure tombstone (MISS-08)
+
+On `identity.learner.erased` the learner's rows are deleted and a tombstone stays in `erased_learners`
+(`learner_id`, `erased_at` — nothing else, no tenant, no personal data; shared building block
+`AddErasureTombstones<TContext>()`). An access token stays valid for up to 10 minutes after erasure, so:
+
+- every request from an erased account gets **410 `learner-erased`** (`ErasedAccountMiddleware`, SkillMuni.Web) instead
+  of recreating an empty row;
+- an event about an erased learner (any event implementing `ILearnerEvent`) delivered late is recorded in the inbox and
+  skipped.
+
+## Arena "last seen rank"
+
+`GET arena` remembers the rank the learner saw (for "You passed X"). It is written as one single-column `UPDATE`
+outside the player's unit of work: it neither checks nor moves the `players.version` concurrency token, so a
+concurrent event updating the same player can't make the read fail.

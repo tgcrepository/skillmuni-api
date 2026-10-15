@@ -19,6 +19,9 @@ public sealed class GatewayOptions
     /// </summary>
     public int AuthPerMinute { get; set; } = 120;
 
+    /// <summary>Requests per minute per signed-in account, from any IP (CLAUDE.md §6).</summary>
+    public int AccountPerMinute { get; set; } = 600;
+
     /// <summary>
     /// The gateway swaps the refresh cookie for a new access token once the current one is this old. Each swap
     /// records activity, so the 30-minute idle timeout is accurate to this interval.

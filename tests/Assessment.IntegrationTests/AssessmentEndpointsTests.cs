@@ -236,6 +236,8 @@ public sealed class AssessmentEndpointsTests(AssessmentApiFactory api)
 
         Assert.False(await api.QueryAsync(db => db.Journeys.AnyAsync(j => j.Id == learnerId)));
         Assert.False(await api.QueryAsync(db => db.Attempts.AnyAsync(a => a.LearnerId == learnerId)));
-        Assert.Equal("new", (await (await client.GetAsync(Base)).JsonAsync(HttpStatusCode.OK)).GetProperty("status").GetString());
+        // The erased account's still-valid token no longer recreates an empty journey (tombstone → 410).
+        Assert.Equal("learner-erased", await (await client.GetAsync(Base)).ProblemCodeAsync(HttpStatusCode.Gone));
+        Assert.False(await api.QueryAsync(db => db.Journeys.AnyAsync(j => j.Id == learnerId)));
     }
 }

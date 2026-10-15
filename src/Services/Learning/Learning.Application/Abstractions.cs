@@ -60,6 +60,12 @@ public interface ILobbyRepository
     Task<LobbyState?> GetAsync(Guid learnerId, CancellationToken cancellationToken);
 
     void Add(LobbyState state);
+
+    /// <summary>
+    /// The learner's Lobby state (tracked), inserting <paramref name="candidate"/> first when there is none. Safe when
+    /// a request and an event create it at once: one insert wins, no duplicate-key error.
+    /// </summary>
+    Task<LobbyState> GetOrCreateAsync(LobbyState candidate, CancellationToken cancellationToken);
 }
 
 public interface IActivityRepository

@@ -88,6 +88,7 @@ public static class LearnerInfrastructureServiceCollectionExtensions
         // Events out (outbox) and in (inbox + the "learner" subscription).
         services.AddSkillMuniMessaging<LearnerDbContext>();
         services.AddSkillMuniEventConsumer<LearnerDbContext>();
+        services.AddErasureTombstones<LearnerDbContext>();
         services.AddIntegrationEventHandler<AccountRegistered, AccountRegisteredHandler>(AccountRegistered.Name);
         services.AddIntegrationEventHandler<ContactVerified, ContactVerifiedHandler>(ContactVerified.Name);
         services.AddIntegrationEventHandler<ClaimConfirmed, ClaimConfirmedHandler>(ClaimConfirmed.Name);

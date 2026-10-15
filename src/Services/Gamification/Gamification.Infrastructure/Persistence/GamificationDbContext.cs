@@ -3,6 +3,7 @@ using Gamification.Domain;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SkillMuni.Common.Tenancy;
+using SkillMuni.Messaging.Erasure;
 using SkillMuni.Messaging.Inbox;
 using SkillMuni.Messaging.Outbox;
 
@@ -64,6 +65,7 @@ public sealed class GamificationDbContext : DbContext, IUnitOfWork
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(GamificationDbContext).Assembly);
         modelBuilder.AddOutbox();
         modelBuilder.AddInbox();
+        modelBuilder.AddErasureTombstones();
 
         modelBuilder.Entity<Player>().HasQueryFilter(e => e.TenantId == CurrentTenantId);
         modelBuilder.Entity<XpEntry>().HasQueryFilter(e => e.TenantId == CurrentTenantId);

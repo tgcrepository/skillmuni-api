@@ -223,10 +223,12 @@ public sealed class LearnServiceTests
         await _h.PassNextAsync(BrainVita, Data);
         await _h.Learn.RecordActivityAsync(_h.LearnerId, 5, default);
 
-        await new AccountErasedHandler(_h.Store).HandleAsync(new AccountErased(_h.LearnerId) { TenantId = "skillmuni-in" }, default);
+        var tombstones = new SkillMuni.Testing.FakeErasureTombstones();
+        await new AccountErasedHandler(_h.Store, tombstones).HandleAsync(new AccountErased(_h.LearnerId) { TenantId = "skillmuni-in" }, default);
 
         Assert.Empty(_h.Store.Progress);
         Assert.Empty(_h.Store.Attempts);
         Assert.Empty(_h.Store.Activity);
+        Assert.Contains(_h.LearnerId, tombstones.Erased);
     }
 }

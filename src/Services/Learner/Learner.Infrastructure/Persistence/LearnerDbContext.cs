@@ -3,6 +3,7 @@ using Learner.Domain;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SkillMuni.Common.Tenancy;
+using SkillMuni.Messaging.Erasure;
 using SkillMuni.Messaging.Inbox;
 using SkillMuni.Messaging.Outbox;
 
@@ -63,6 +64,7 @@ public sealed class LearnerDbContext : DbContext, IUnitOfWork
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(LearnerDbContext).Assembly);
         modelBuilder.AddOutbox();
         modelBuilder.AddInbox();
+        modelBuilder.AddErasureTombstones();
 
         modelBuilder.Entity<LearnerProfile>().HasQueryFilter(e => e.TenantId == CurrentTenantId);
         modelBuilder.Entity<QuestAnswers>().HasQueryFilter(e => e.TenantId == CurrentTenantId);

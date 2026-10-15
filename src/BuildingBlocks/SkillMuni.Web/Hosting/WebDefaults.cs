@@ -14,6 +14,7 @@ using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using SkillMuni.Common.Tenancy;
+using SkillMuni.Web.Auth;
 using SkillMuni.Web.Caching;
 using SkillMuni.Web.Correlation;
 using SkillMuni.Web.Errors;
@@ -101,6 +102,7 @@ public static class WebDefaults
 
         app.UseAuthentication();
         app.UseMiddleware<TenantGuardMiddleware>();
+        app.UseMiddleware<ErasedAccountMiddleware>();
         app.UseAuthorization();
         app.MapSkillMuniHealth();
         app.MapControllers();

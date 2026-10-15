@@ -73,17 +73,19 @@ public sealed partial class QuestService(
         var learner = await accessor.GetOrCreateAsync(who, cancellationToken);
         var now = clock.GetUtcNow().UtcDateTime;
 
-        var record = await answers.FindAsync(who.Id, slug, cancellationToken);
-        if (record is null)
-        {
-            record = QuestAnswers.Start(tenant.TenantId, who.Id, slug, now);
-            answers.Add(record);
-        }
-
-        var merged = AnswersJson.Merge(record.AnswersJson, request.Values);
+        var existing = await answers.FindAsync(who.Id, slug, cancellationToken);
+        var merged = AnswersJson.Merge(existing?.AnswersJson ?? AnswersJson.Empty, request.Values);
         if (AnswersJson.Utf8Length(merged) > options.Value.MaxQuestAnswersBytes)
         {
             return LearnerErrors.AnswersTooLarge;
+        }
+
+        // First save of this quest: insert-if-absent, so a CV pre-fill (cv.parse.completed) creating the same row at
+        // the same moment can't hit the unique key; if it won, merge onto what it stored.
+        var record = existing ?? await answers.GetOrCreateAsync(QuestAnswers.Start(tenant.TenantId, who.Id, slug, now), cancellationToken);
+        if (existing is null)
+        {
+            merged = AnswersJson.Merge(record.AnswersJson, request.Values);
         }
 
         record.Replace(merged, now);

@@ -129,13 +129,15 @@ public sealed class SupportingServiceTests
         var who = LearnerHarness.NewLearner();
         await _h.Profile.UploadPhotoAsync(who, new UploadedFile("p.png", "image/png", 8, new MemoryStream([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A])), _ct);
         await _h.Quests.SavePartAsync(who, "who-dis", 1, LearnerHarness.Part(new { firstName = "Asha" }), _ct);
-        var handler = new AccountErasedHandler(_h.Store, _h.Blobs, NullLogger<AccountErasedHandler>.Instance);
+        var tombstones = new SkillMuni.Testing.FakeErasureTombstones();
+        var handler = new AccountErasedHandler(_h.Store, _h.Blobs, tombstones, NullLogger<AccountErasedHandler>.Instance);
 
         await handler.HandleAsync(new AccountErased(who.Id) { TenantId = LearnerHarness.Tenant }, _ct);
 
         Assert.Empty(_h.Store.Learners);
         Assert.Empty(_h.Store.Answers);
         Assert.Empty(_h.Blobs.Blobs);
+        Assert.Contains(who.Id, tombstones.Erased);
     }
 
     [Fact]

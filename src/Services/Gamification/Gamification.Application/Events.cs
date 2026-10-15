@@ -8,14 +8,14 @@ namespace Gamification.Application;
 
 /// <summary>The learner's totals after an award (Learner keeps a copy for its screens). Totals, not deltas.</summary>
 public sealed record XpAwarded(Guid LearnerId, int TotalXp, int Level, string Rank, int LevelStartXp, int NextLevelXp, int Badges, int StreakDays)
-    : IntegrationEvent
+    : IntegrationEvent, ILearnerEvent
 {
     public const string Name = "gamification.xp.awarded";
 
     public override string EventType => Name;
 }
 
-public sealed record BadgeEarned(Guid LearnerId, string BadgeId, string BadgeName) : IntegrationEvent
+public sealed record BadgeEarned(Guid LearnerId, string BadgeId, string BadgeName) : IntegrationEvent, ILearnerEvent
 {
     public const string Name = "gamification.badge.earned";
 
@@ -24,11 +24,13 @@ public sealed record BadgeEarned(Guid LearnerId, string BadgeId, string BadgeNam
 
 // ---- Consumed (Gamification's own copies; publisher field names) ----
 
-public sealed record AccountRegistered(Guid AccountId, string FirstName, string LastName, string Market) : IntegrationEvent
+public sealed record AccountRegistered(Guid AccountId, string FirstName, string LastName, string Market) : IntegrationEvent, ILearnerEvent
 {
     public const string Name = "identity.learner.registered";
 
     public override string EventType => Name;
+
+    Guid ILearnerEvent.LearnerId => AccountId;
 }
 
 public sealed record AccountErased(Guid AccountId) : IntegrationEvent
@@ -39,21 +41,21 @@ public sealed record AccountErased(Guid AccountId) : IntegrationEvent
 }
 
 /// <summary><see cref="Paid"/> is false for an all-optional step finished with nothing added (BR-101): it counts, but pays 0.</summary>
-public sealed record QuestStepCompleted(Guid LearnerId, string Slug, int Quest, int Part, bool Paid = true) : IntegrationEvent
+public sealed record QuestStepCompleted(Guid LearnerId, string Slug, int Quest, int Part, bool Paid = true) : IntegrationEvent, ILearnerEvent
 {
     public const string Name = "learner.quest.step-completed";
 
     public override string EventType => Name;
 }
 
-public sealed record QuestCompleted(Guid LearnerId, string Slug, int Quest, string Badge) : IntegrationEvent
+public sealed record QuestCompleted(Guid LearnerId, string Slug, int Quest, string Badge) : IntegrationEvent, ILearnerEvent
 {
     public const string Name = "learner.quest.completed";
 
     public override string EventType => Name;
 }
 
-public sealed record ProfileTaskCompleted(Guid LearnerId, string Task) : IntegrationEvent
+public sealed record ProfileTaskCompleted(Guid LearnerId, string Task) : IntegrationEvent, ILearnerEvent
 {
     public const string Name = "learner.profile.task-completed";
 
@@ -61,14 +63,14 @@ public sealed record ProfileTaskCompleted(Guid LearnerId, string Task) : Integra
 }
 
 /// <summary>BR-110: the Job Profile reached 100% for the first time.</summary>
-public sealed record JobProfileCompleted(Guid LearnerId) : IntegrationEvent
+public sealed record JobProfileCompleted(Guid LearnerId) : IntegrationEvent, ILearnerEvent
 {
     public const string Name = "learner.job-profile.completed";
 
     public override string EventType => Name;
 }
 
-public sealed record ProgrammeEnrolled(Guid LearnerId, string ProgrammeCode, bool PaysStipend) : IntegrationEvent
+public sealed record ProgrammeEnrolled(Guid LearnerId, string ProgrammeCode, bool PaysStipend) : IntegrationEvent, ILearnerEvent
 {
     public const string Name = "learner.programme.enrolled";
 
@@ -76,14 +78,14 @@ public sealed record ProgrammeEnrolled(Guid LearnerId, string ProgrammeCode, boo
 }
 
 /// <summary>BR-114: Gamification decides whether it pays (at most once per 30 days).</summary>
-public sealed record FeedbackSent(Guid LearnerId, int Mood) : IntegrationEvent
+public sealed record FeedbackSent(Guid LearnerId, int Mood) : IntegrationEvent, ILearnerEvent
 {
     public const string Name = "learner.feedback.sent";
 
     public override string EventType => Name;
 }
 
-public sealed record PhotoChanged(Guid LearnerId, string PhotoUrl) : IntegrationEvent
+public sealed record PhotoChanged(Guid LearnerId, string PhotoUrl) : IntegrationEvent, ILearnerEvent
 {
     public const string Name = "learner.photo.changed";
 
@@ -91,7 +93,7 @@ public sealed record PhotoChanged(Guid LearnerId, string PhotoUrl) : Integration
 }
 
 /// <summary>From Assessment: the 9th pair of an island answered (BR-104 pays islands 1–3).</summary>
-public sealed record IslandCleared(Guid LearnerId, int Attempt, int Island, bool FirstAttempt) : IntegrationEvent
+public sealed record IslandCleared(Guid LearnerId, int Attempt, int Island, bool FirstAttempt) : IntegrationEvent, ILearnerEvent
 {
     public const string Name = "assessment.island.cleared";
 
@@ -105,7 +107,7 @@ public sealed record AssessmentSubmitted(
     bool FirstAttempt,
     string ArchetypeName,
     string ArchetypeSummary,
-    IReadOnlyList<string>? TopDrivers) : IntegrationEvent
+    IReadOnlyList<string>? TopDrivers) : IntegrationEvent, ILearnerEvent
 {
     public const string Name = "assessment.attempt.submitted";
 
@@ -113,7 +115,7 @@ public sealed record AssessmentSubmitted(
 }
 
 /// <summary>From Learning: minutes spent learning (daily quest "Learn for 15 minutes").</summary>
-public sealed record LearningActivity(Guid LearnerId, int Minutes) : IntegrationEvent
+public sealed record LearningActivity(Guid LearnerId, int Minutes) : IntegrationEvent, ILearnerEvent
 {
     public const string Name = "learning.activity.recorded";
 
@@ -121,7 +123,7 @@ public sealed record LearningActivity(Guid LearnerId, int Minutes) : Integration
 }
 
 /// <summary>From Learning: a brief read to the end.</summary>
-public sealed record BriefCompleted(Guid LearnerId, string BriefId, string? ModuleSlug, string? CourseSlug, bool FirstCompletion) : IntegrationEvent
+public sealed record BriefCompleted(Guid LearnerId, string BriefId, string? ModuleSlug, string? CourseSlug, bool FirstCompletion) : IntegrationEvent, ILearnerEvent
 {
     public const string Name = "learning.brief.completed";
 
@@ -130,21 +132,21 @@ public sealed record BriefCompleted(Guid LearnerId, string BriefId, string? Modu
 
 /// <summary>From Learning: a brief's quiz submitted. Only the first submit pays and keeps the streak (BR-106, B-45).</summary>
 public sealed record QuizSubmitted(Guid LearnerId, string QuizId, string? BriefId, string? ModuleSlug, int Correct, int Total, bool FirstAttempt)
-    : IntegrationEvent
+    : IntegrationEvent, ILearnerEvent
 {
     public const string Name = "learning.quiz.submitted";
 
     public override string EventType => Name;
 }
 
-public sealed record ModuleCompleted(Guid LearnerId, string ModuleSlug, string? CourseSlug) : IntegrationEvent
+public sealed record ModuleCompleted(Guid LearnerId, string ModuleSlug, string? CourseSlug) : IntegrationEvent, ILearnerEvent
 {
     public const string Name = "learning.module.completed";
 
     public override string EventType => Name;
 }
 
-public sealed record CourseCompleted(Guid LearnerId, string CourseSlug) : IntegrationEvent
+public sealed record CourseCompleted(Guid LearnerId, string CourseSlug) : IntegrationEvent, ILearnerEvent
 {
     public const string Name = "learning.course.completed";
 
@@ -152,7 +154,7 @@ public sealed record CourseCompleted(Guid LearnerId, string CourseSlug) : Integr
 }
 
 /// <summary>From Learning: the Lobby's first-moves bonus collected (BR-107).</summary>
-public sealed record FirstMovesClaimed(Guid LearnerId) : IntegrationEvent
+public sealed record FirstMovesClaimed(Guid LearnerId) : IntegrationEvent, ILearnerEvent
 {
     public const string Name = "learning.first-moves.claimed";
 
@@ -160,7 +162,7 @@ public sealed record FirstMovesClaimed(Guid LearnerId) : IntegrationEvent
 }
 
 /// <summary>From Careers: an application sent (BR-111 pays the first).</summary>
-public sealed record ApplicationSent(Guid LearnerId, string? ApplicationId, string? JobId) : IntegrationEvent
+public sealed record ApplicationSent(Guid LearnerId, string? ApplicationId, string? JobId) : IntegrationEvent, ILearnerEvent
 {
     public const string Name = "careers.application.sent";
 
@@ -168,7 +170,7 @@ public sealed record ApplicationSent(Guid LearnerId, string? ApplicationId, stri
 }
 
 /// <summary>From Careers: a Hire Fest slot booked (BR-112 pays the first).</summary>
-public sealed record FestBooked(Guid LearnerId, string? BookingId, string? FestId) : IntegrationEvent
+public sealed record FestBooked(Guid LearnerId, string? BookingId, string? FestId) : IntegrationEvent, ILearnerEvent
 {
     public const string Name = "careers.fest.booked";
 

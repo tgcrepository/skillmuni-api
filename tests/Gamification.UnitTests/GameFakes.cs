@@ -52,6 +52,12 @@ public sealed class GameStore :
 
     public void Add(Player player) => Players.Add(player);
 
+    public Task RememberSeenRankAsync(Guid learnerId, int rank, CancellationToken cancellationToken)
+    {
+        Players.FirstOrDefault(p => p.Id == learnerId)?.SawRank(rank);
+        return Task.CompletedTask;
+    }
+
     public Task<bool> ExistsAsync(Guid learnerId, string reason, string sourceId, CancellationToken cancellationToken) =>
         Task.FromResult(Ledger.Any(e => e.LearnerId == learnerId && e.Reason == reason && e.SourceId == sourceId));
 

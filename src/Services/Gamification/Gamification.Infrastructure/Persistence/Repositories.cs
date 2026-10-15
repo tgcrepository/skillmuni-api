@@ -21,6 +21,14 @@ internal sealed class PlayerRepository(GamificationDbContext db) : IPlayerReposi
     public Task<int> CountAsync(CancellationToken cancellationToken) => db.Players.CountAsync(cancellationToken);
 
     public void Add(Player player) => db.Players.Add(player);
+
+    /// <remarks>
+    /// One set-based UPDATE of that column only: it neither checks nor moves the row's concurrency token
+    /// (<c>updated_at</c>), so it can't collide with an event saving the same player, and an event's save never
+    /// overwrites it (EF writes only the columns it changed).
+    /// </remarks>
+    public Task RememberSeenRankAsync(Guid learnerId, int rank, CancellationToken cancellationToken) =>
+        db.Players.Where(p => p.Id == learnerId).ExecuteUpdateAsync(s => s.SetProperty(p => p.LastSeenRank, (int?)rank), cancellationToken);
 }
 
 internal sealed class XpLedger(GamificationDbContext db) : IXpLedger

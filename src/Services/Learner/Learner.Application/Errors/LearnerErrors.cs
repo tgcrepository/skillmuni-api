@@ -5,7 +5,8 @@ namespace Learner.Application.Errors;
 /// <summary>Every expected failure, with the business code the frontend maps to a screen state.</summary>
 public static class LearnerErrors
 {
-    public static readonly Error LearnerErased = Error.Gone("learner-erased", "This account has been deleted");
+    /// <summary>Written for every request from an erased account by the shared tombstone check (SkillMuni.Web).</summary>
+    public static readonly Error LearnerErased = SkillMuni.Common.Privacy.ErasureErrors.LearnerErased;
 
     public static readonly Error QuestNotFound = Error.NotFound("quest-not-found", "Quest not found");
 

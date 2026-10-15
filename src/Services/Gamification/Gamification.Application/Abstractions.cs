@@ -18,6 +18,12 @@ public interface IPlayerRepository
     Task<int> CountAsync(CancellationToken cancellationToken);
 
     void Add(Player player);
+
+    /// <summary>
+    /// Stores the Arena rank the learner just saw ("You passed X" next time). Written on its own, outside the
+    /// player's unit of work, so a GET of the Arena never fails on a concurrent event updating the same player.
+    /// </summary>
+    Task RememberSeenRankAsync(Guid learnerId, int rank, CancellationToken cancellationToken);
 }
 
 public interface IXpLedger

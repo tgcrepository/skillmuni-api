@@ -82,3 +82,14 @@ Publishes `careers.application.sent`, `careers.application.withdrawn`, `careers.
 | `Redis:Host` or `ConnectionStrings:Redis` | Idempotency-Key store |
 | `Careers:FestBookingGate`, `MatchingThreshold`, `ReapplyCoolOffDays`, `CancelCutoffHours`, `MaxCvBytes`, `Missions`, `Matching`, `Fest`, `TimeZones` | optional overrides |
 | `ServiceBus:Subscription` | `careers` |
+
+## Erasure tombstone (MISS-08)
+
+On `identity.learner.erased` the learner's rows are deleted and a tombstone stays in `erased_learners`
+(`learner_id`, `erased_at` — nothing else, no tenant, no personal data; shared building block
+`AddErasureTombstones<TContext>()`). An access token stays valid for up to 10 minutes after erasure, so:
+
+- every request from an erased account gets **410 `learner-erased`** (`ErasedAccountMiddleware`, SkillMuni.Web) instead
+  of recreating an empty row;
+- an event about an erased learner (any event implementing `ILearnerEvent`) delivered late is recorded in the inbox and
+  skipped.
