@@ -77,6 +77,9 @@ public sealed class GamificationEndpointsTests(GamificationApiFactory api)
         Assert.True(leaderRow.GetProperty("rank").GetInt32() < myRow.GetProperty("rank").GetInt32());
         Assert.Equal(myRow.GetProperty("rank").GetInt32(), board.GetProperty("me").GetProperty("rank").GetInt32());
         Assert.False(board.TryGetProperty("streakBonus", out _));
+
+        // arena.api.ts `photo?: string`: left out, never null, when the player has no photo.
+        Assert.False(myRow.TryGetProperty("photo", out _));
         Assert.Equal(0, board.GetProperty("rewards").GetProperty("coins").GetInt32());
         Assert.Equal(JsonValueKind.Null, board.GetProperty("rewards").GetProperty("voucher").ValueKind);
 
