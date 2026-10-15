@@ -45,8 +45,8 @@ public sealed class ProfileProgressService(
             {
                 if (quest.Number > learner.QuestsCompleted)
                 {
-                    // The quest in progress: steps after the last one saved. Later quests: everything.
-                    return quest.Number != learner.QuestsCompleted + 1 || step.Part > learner.PartsDone;
+                    // The quest in progress: steps after the last one saved, or skipped. Later quests: everything.
+                    return quest.Number != learner.QuestsCompleted + 1 || step.Part > learner.PartsDone || AnswersJson.IsSkipped(json, step.Key);
                 }
 
                 return AnswersJson.IsSkipped(json, step.Key);

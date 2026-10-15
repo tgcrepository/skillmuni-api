@@ -7,15 +7,11 @@ using SkillMuni.Web.Idempotency;
 
 namespace Learner.Api.Controllers;
 
-/// <summary>API-125–128: progress and the 8 registration quests.</summary>
+/// <summary>API-126–128: the 8 registration quests. <c>GET me/progress</c> (API-125) is served by Gamification (BR-138).</summary>
 [ApiVersion(1.0)]
 [Route("api/v{version:apiVersion}/me")]
-public sealed class QuestsController(IQuestService quests, IProgressService progress) : LearnerControllerBase
+public sealed class QuestsController(IQuestService quests) : LearnerControllerBase
 {
-    [HttpGet("progress")]
-    public async Task<ActionResult<LearnerProgressDto>> Progress(CancellationToken cancellationToken) =>
-        await progress.GetAsync(CurrentLearner, cancellationToken);
-
     [HttpGet("quests/{slug}/answers")]
     public async Task<IActionResult> Answers(string slug, CancellationToken cancellationToken) =>
         (await quests.GetAnswersAsync(CurrentLearner, slug, cancellationToken)).ToActionResult(this);

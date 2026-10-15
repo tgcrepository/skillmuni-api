@@ -25,6 +25,8 @@ public static class LearnerApplicationServiceCollectionExtensions
         services.AddScoped<ISkillSearchService, SkillSearchService>();
         services.AddScoped<IPreferencesService, PreferencesService>();
         services.AddScoped<IProfileProgressService, ProfileProgressService>();
+        services.AddScoped<IJobProfileCompletion, JobProfileCompletion>();
+        services.AddScoped<IJobProfileService, JobProfileService>();
         services.AddValidatorsFromAssemblyContaining<SavePartRequestValidator>(ServiceLifetime.Singleton, includeInternalTypes: false);
         return services;
     }

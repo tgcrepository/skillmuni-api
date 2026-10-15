@@ -79,9 +79,9 @@ public sealed class SupportingServiceTests
 
         var progress = (await _h.ProfileProgress.GetAsync(who.Id, _ct)).Value;
 
-        Assert.Equal(17, progress.Total);
+        Assert.Equal(18, progress.Total);
         Assert.Equal(6, progress.Filled);
-        Assert.Equal(35, progress.Percent);
+        Assert.Equal(33, progress.Percent);
         var q2 = progress.Quests.Single(q => q.Slug == "hit-me-up");
         Assert.Equal("backup", Assert.Single(q2.Left).Key);
         var q3 = progress.Quests.Single(q => q.Slug == "big-brain-stuff");
@@ -114,7 +114,7 @@ public sealed class SupportingServiceTests
     public async Task Registration_event_completes_a_learner_a_fast_request_created()
     {
         var who = LearnerHarness.NewLearner();
-        await _h.Progress.GetAsync(who, _ct);
+        await _h.ProgressAsync(who);
         var handler = new AccountRegisteredHandler(_h.Store, _h.Store, _h.Clock);
 
         await handler.HandleAsync(new AccountRegistered(who.Id, "Asha", "Rao", null, "+919876540697", "IN", "phone") { TenantId = LearnerHarness.Tenant }, _ct);
@@ -139,14 +139,37 @@ public sealed class SupportingServiceTests
     }
 
     [Fact]
-    public async Task Claim_confirmation_counts_quests_1_to_5_as_done()
+    public async Task Claim_confirmation_counts_quests_1_to_5_as_done_and_publishes_their_step_and_quest_events()
     {
         var who = LearnerHarness.NewLearner();
-        await _h.Progress.GetAsync(who, _ct);
+        await _h.FinishQuestsAsync(who, 1);
+        _h.Store.Events.Clear();
+        var handler = new ClaimConfirmedHandler(_h.Store, _h.Catalog, _h.JobProfileCompletion, _h.Store, _h.Clock, NullLogger<ClaimConfirmedHandler>.Instance);
 
-        await new ClaimConfirmedHandler(_h.Store, _h.Clock).HandleAsync(new ClaimConfirmed(Guid.NewGuid(), who.Id) { TenantId = LearnerHarness.Tenant }, _ct);
+        await handler.HandleAsync(new ClaimConfirmed(Guid.NewGuid(), who.Id) { TenantId = LearnerHarness.Tenant }, _ct);
+        await handler.HandleAsync(new ClaimConfirmed(Guid.NewGuid(), who.Id) { TenantId = LearnerHarness.Tenant }, _ct);
 
-        Assert.Equal(5, (await _h.Progress.GetAsync(who, _ct)).Completed);
+        Assert.Equal(5, (await _h.ProgressAsync(who)).Completed);
+
+        // BR-119: quests 2–5 (quest 1 was already done) through the normal path: 12 paid steps and 4 quests.
+        var steps = _h.Store.EventsOf<QuestStepCompleted>().ToList();
+        Assert.Equal(12, steps.Count);
+        Assert.All(steps, s => Assert.True(s.Paid));
+        Assert.Equal(new[] { 2, 3, 4, 5 }, _h.Store.EventsOf<QuestCompleted>().Select(q => q.Quest));
+        Assert.Equal("Storyteller Badge", _h.Store.EventsOf<QuestCompleted>().Last().Badge);
+    }
+
+    [Fact]
+    public async Task Claim_for_a_new_learner_pays_550_through_the_events()
+    {
+        var who = LearnerHarness.NewLearner();
+        await _h.ProgressAsync(who);
+
+        await new ClaimConfirmedHandler(_h.Store, _h.Catalog, _h.JobProfileCompletion, _h.Store, _h.Clock, NullLogger<ClaimConfirmedHandler>.Instance)
+            .HandleAsync(new ClaimConfirmed(Guid.NewGuid(), who.Id) { TenantId = LearnerHarness.Tenant }, _ct);
+
+        var xp = (_h.Store.EventsOf<QuestStepCompleted>().Count(s => s.Paid) * 20) + (_h.Store.EventsOf<QuestCompleted>().Count() * 50);
+        Assert.Equal(550, xp);
     }
 
     [Fact]
@@ -159,7 +182,7 @@ public sealed class SupportingServiceTests
         await handler.HandleAsync(new XpAwarded(who.Id, 450, 2, "Pathfinder", 400, 800, 1, 1) { TenantId = LearnerHarness.Tenant }, _ct);
         _h.Clock.Advance(TimeSpan.FromMinutes(10));
 
-        var progress = await _h.Progress.GetAsync(who, _ct);
+        var progress = await _h.ProgressAsync(who);
         Assert.Equal((450, 2, "Pathfinder", 800), (progress.Xp, progress.Level, progress.Rank, progress.Target));
     }
 
@@ -183,7 +206,7 @@ public sealed class SupportingServiceTests
             ["not-a-quest"] = JsonSerializer.SerializeToElement(new { x = 1 }),
         };
 
-        await new CvParsedHandler(_h.Store, _h.Catalog, _h.Clock)
+        await new CvParsedHandler(_h.Store, _h.Store, _h.Catalog, _h.Clock)
             .HandleAsync(new CvParsed(Guid.NewGuid(), who.Id, null, prefill) { TenantId = LearnerHarness.Tenant }, _ct);
 
         var contact = (await _h.Quests.GetAnswersAsync(who, "hit-me-up", _ct)).Value;
@@ -191,5 +214,8 @@ public sealed class SupportingServiceTests
         Assert.Equal("asha@example.com", contact.GetProperty("email").GetString());
         Assert.Equal("internship", (await _h.Quests.GetAnswersAsync(who, "work-lore", _ct)).Value.GetProperty("workTypes")[0].GetString());
         Assert.DoesNotContain(_h.Store.Answers, a => a.Slug == "not-a-quest");
+
+        // Kept for the Job Profile's "Upload a newer CV" suggestions.
+        Assert.Contains("asha@example.com", Assert.Single(_h.Store.JobProfiles).CvPrefillJson, StringComparison.Ordinal);
     }
 }

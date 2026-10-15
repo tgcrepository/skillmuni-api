@@ -15,14 +15,20 @@ internal static class FileSniffer
     public const string Webp = "image/webp";
     public const string Heic = "image/heic";
     public const string Pdf = "application/pdf";
+    public const string Docx = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 
     private static readonly byte[] JpegMagic = [0xFF, 0xD8, 0xFF];
+
+    private static readonly byte[] ZipMagic = [0x50, 0x4B, 0x03, 0x04];
 
     private static readonly byte[] PngMagic = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
 
     public static readonly string[] Images = [Jpeg, Png, Webp, Heic];
 
     public static readonly string[] Certificates = [Pdf, Jpeg, Png, Webp, Heic];
+
+    /// <summary>A-207: a newer CV for the Job Profile is a PDF or a Word (.docx) file.</summary>
+    public static readonly string[] CvFiles = [Pdf, Docx];
 
     public static async Task<Result<(MemoryStream Content, string ContentType)>> ReadAsync(
         UploadedFile? file,
@@ -74,6 +80,12 @@ internal static class FileSniffer
         if (head.StartsWith("%PDF-"u8))
         {
             return Pdf;
+        }
+
+        // A ZIP container: Word's .docx (only allowed where a CV is expected; old binary .doc is refused, B-28).
+        if (head.StartsWith(ZipMagic))
+        {
+            return Docx;
         }
 
         if (head.Length >= 12 && head[..4].SequenceEqual("RIFF"u8) && head[8..12].SequenceEqual("WEBP"u8))

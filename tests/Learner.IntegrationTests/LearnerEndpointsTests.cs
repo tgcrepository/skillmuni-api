@@ -16,7 +16,7 @@ public sealed class LearnerEndpointsTests(LearnerApiFactory api)
     [Fact]
     public async Task No_session_is_401()
     {
-        var response = await api.CreateClient().GetAsync("/api/v1/me/progress");
+        var response = await api.CreateClient().GetAsync("/api/v1/job-profile");
         Assert.Equal("no-session", await response.ProblemCodeAsync(HttpStatusCode.Unauthorized));
     }
 
@@ -25,17 +25,84 @@ public sealed class LearnerEndpointsTests(LearnerApiFactory api)
     {
         var client = api.CreateLearnerClient();
         client.DefaultRequestHeaders.Add("X-Tenant-Id", "skillmuni-za");
-        Assert.Equal("tenant-mismatch", await (await client.GetAsync("/api/v1/me/progress")).ProblemCodeAsync(HttpStatusCode.Forbidden));
+        Assert.Equal("tenant-mismatch", await (await client.GetAsync("/api/v1/job-profile")).ProblemCodeAsync(HttpStatusCode.Forbidden));
     }
 
     [Fact]
-    public async Task A_new_learner_starts_at_zero()
+    public async Task Progress_is_no_longer_served_here()
     {
-        var progress = await (await api.CreateLearnerClient().GetAsync("/api/v1/me/progress")).JsonAsync(HttpStatusCode.OK);
+        // BR-138: GET me/progress is Gamification's (the gateway routes it there).
+        Assert.Equal(HttpStatusCode.NotFound, (await api.CreateLearnerClient().GetAsync("/api/v1/me/progress")).StatusCode);
+    }
 
-        Assert.Equal(0, progress.GetProperty("completed").GetInt32());
-        Assert.Equal("Rookie", progress.GetProperty("rank").GetString());
-        Assert.Equal(400, progress.GetProperty("target").GetInt32());
+    [Fact]
+    public async Task A_new_learners_job_profile_is_empty()
+    {
+        var profile = await (await api.CreateLearnerClient().GetAsync("/api/v1/job-profile")).JsonAsync(HttpStatusCode.OK);
+
+        Assert.Equal(8, profile.GetProperty("byQuest").GetArrayLength());
+        Assert.Equal(0, profile.GetProperty("strength").GetProperty("percent").GetInt32());
+        Assert.Equal(0, profile.GetProperty("work").GetArrayLength());
+        Assert.True(profile.GetProperty("about").GetProperty("byMuni").GetBoolean());
+        Assert.Equal(JsonValueKind.Null, profile.GetProperty("archetype").ValueKind);
+        Assert.Equal("Drop the Receipts", profile.GetProperty("sources").GetProperty("certificates").GetProperty("name").GetString());
+    }
+
+    [Fact]
+    public async Task Job_profile_about_share_and_newer_cv()
+    {
+        var client = api.CreateLearnerClient(out var id);
+        await client.PutJsonAsync("/api/v1/me/quests/work-lore/parts/1", new { values = new { chapters = new[] { new { role = "Cashier", company = "Shoprite", start = "2022-03", end = "2023-12", current = false } } }, done = false });
+
+        var about = await (await client.PutJsonAsync("/api/v1/job-profile/about", new { text = "I love helping people." })).JsonAsync(HttpStatusCode.OK);
+        Assert.Equal("I love helping people.", about.GetProperty("about").GetProperty("text").GetString());
+        Assert.Equal("Mar 2022 – Dec 2023 · 1 yr 10 mos", about.GetProperty("work")[0].GetProperty("period").GetString());
+        Assert.Equal("validation", await (await client.PutJsonAsync("/api/v1/job-profile/about", new { text = new string('a', 401) })).ProblemCodeAsync(HttpStatusCode.UnprocessableEntity));
+
+        var share = await (await client.GetAsync("/api/v1/job-profile/share")).JsonAsync(HttpStatusCode.OK);
+        Assert.True(share.GetProperty("hideContact").GetBoolean());
+        Assert.Equal(30, share.GetProperty("expiresDays").GetInt32());
+        var updated = await (await client.PutJsonAsync("/api/v1/job-profile/share", new { hideContact = false, expiresDays = 90 })).JsonAsync(HttpStatusCode.OK);
+        Assert.Equal((share.GetProperty("url").GetString(), 90), (updated.GetProperty("url").GetString(), updated.GetProperty("expiresDays").GetInt32()));
+        Assert.Equal("validation", await (await client.PutJsonAsync("/api/v1/job-profile/share", new { hideContact = true, expiresDays = 45 })).ProblemCodeAsync(HttpStatusCode.UnprocessableEntity));
+
+        var contact = await (await client.GetAsync("/api/v1/job-profile/cv-contact")).JsonAsync(HttpStatusCode.OK);
+        Assert.Equal(JsonValueKind.Null, contact.GetProperty("linkedin").ValueKind);
+
+        var prefill = new Dictionary<string, object>
+        {
+            ["your-flex-era"] = new { skills = new[] { new { name = "Freshdesk", level = 2 } } },
+        };
+        await api.DeliverAsync("cv.parse.completed", Guid.NewGuid(), new { cvId = Guid.NewGuid(), learnerId = id, outcome = "ok", prefill, tenantId = LearnerApiFactory.Tenant });
+
+        using var form = new MultipartFormDataContent { { new ByteArrayContent("%PDF-1.7
+"u8.ToArray()), "cv", "cv.pdf" } };
+        var changes = await (await client.PostAsync("/api/v1/job-profile/cv", form)).JsonAsync(HttpStatusCode.OK);
+        var change = changes.EnumerateArray().Single(c => c.GetProperty("kind").GetString() == "skill");
+        Assert.Equal(("skill-freshdesk", "add"), (change.GetProperty("id").GetString(), change.GetProperty("suggest").GetString()));
+
+        var applied = await (await client.PostJsonAsync("/api/v1/job-profile/cv/apply", new { ids = new[] { "skill-freshdesk" } })).JsonAsync(HttpStatusCode.OK);
+        Assert.Contains(applied.GetProperty("skills").EnumerateArray(), s => s.GetProperty("name").GetString() == "Freshdesk");
+        Assert.Equal("validation", await (await client.PostJsonAsync("/api/v1/job-profile/cv/apply", new { })).ProblemCodeAsync(HttpStatusCode.UnprocessableEntity));
+
+        using var bad = new MultipartFormDataContent { { new ByteArrayContent(Png), "cv", "cv.png" } };
+        Assert.Equal("unsupported-type", await (await client.PostAsync("/api/v1/job-profile/cv", bad)).ProblemCodeAsync(HttpStatusCode.UnprocessableEntity));
+    }
+
+    [Fact]
+    public async Task A_confirmed_claim_publishes_the_step_and_quest_events_for_quests_1_to_5()
+    {
+        var client = api.CreateLearnerClient(out var id);
+        await client.GetAsync("/api/v1/job-profile");
+
+        Assert.Equal(DispatchOutcome.Handled, await api.DeliverAsync("identity.claim.confirmed", Guid.NewGuid(), new { claimId = Guid.NewGuid(), accountId = id, tenantId = LearnerApiFactory.Tenant }));
+
+        var outbox = await api.QueryAsync(db => db.OutboxMessages.AsNoTracking().Select(m => new { m.EventType, m.Payload }).ToListAsync());
+        var events = outbox.Where(m => m.Payload.Contains(id.ToString(), StringComparison.OrdinalIgnoreCase)).Select(m => m.EventType).ToList();
+        Assert.Equal(15, events.Count(e => e == "learner.quest.step-completed"));
+        Assert.Equal(5, events.Count(e => e == "learner.quest.completed"));
+        var learner = await api.QueryAsync(db => db.Learners.AsNoTracking().SingleAsync(l => l.Id == id));
+        Assert.Equal(5, learner.QuestsCompleted);
     }
 
     [Fact]
@@ -273,7 +340,7 @@ public sealed class LearnerEndpointsTests(LearnerApiFactory api)
         Assert.Equal("Kumar", answers.GetProperty("lastName").GetString());
 
         var progress = await (await client.GetAsync($"/internal/learners/{id}/profile-progress")).JsonAsync(HttpStatusCode.OK);
-        Assert.Equal(17, progress.GetProperty("total").GetInt32());
+        Assert.Equal(18, progress.GetProperty("total").GetInt32());
 
         Assert.Equal(DispatchOutcome.Handled, await api.DeliverAsync("identity.learner.erased", Guid.NewGuid(), new { accountId = id, tenantId = LearnerApiFactory.Tenant }));
         Assert.False(await api.QueryAsync(db => db.Learners.AnyAsync(l => l.Id == id)));

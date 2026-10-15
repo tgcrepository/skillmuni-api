@@ -144,7 +144,7 @@ public sealed partial class ProgrammeService(
         learner.RecordAwardedXp(earned, now);
         outbox.Add(new ProgrammeEnrolled(who.Id, programme.Code, programme.PaysStipend) { TenantId = tenant.TenantId });
         await unitOfWork.SaveChangesAsync(cancellationToken);
-        LogEnrolled(logger, who.Id, programme.Code);
+        LogEnrolled(logger, who.Id, programme.Id);
 
         return new ProgrammeResultDto(earned, progress.For(learner), bank is null ? string.Empty : bank.Account[^2..]);
     }
@@ -196,6 +196,7 @@ public sealed partial class ProgrammeService(
     [GeneratedRegex("^[A-Z]{4}0[A-Z0-9]{6}$", RegexOptions.CultureInvariant)]
     private static partial Regex IfscPattern();
 
-    [LoggerMessage(Level = LogLevel.Information, Message = "Programme enrolled {LearnerId} {ProgrammeCode}")]
-    private static partial void LogEnrolled(ILogger logger, Guid learnerId, string programmeCode);
+    /// <summary>Logs the programme's id, never its code (the code unlocks the programme).</summary>
+    [LoggerMessage(Level = LogLevel.Information, Message = "Programme enrolled {LearnerId} {ProgrammeId}")]
+    private static partial void LogEnrolled(ILogger logger, Guid learnerId, Guid programmeId);
 }

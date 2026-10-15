@@ -42,6 +42,9 @@ internal sealed class QuestAnswersRepository(LearnerDbContext db) : IQuestAnswer
             .Select(a => new { a.Slug, a.AnswersJson })
             .ToDictionaryAsync(a => a.Slug, a => a.AnswersJson, StringComparer.Ordinal, cancellationToken);
 
+    public Task<DateTime?> LastUpdatedAsync(Guid learnerId, CancellationToken cancellationToken) =>
+        db.QuestAnswers.AsNoTracking().Where(a => a.LearnerId == learnerId).MaxAsync(a => (DateTime?)a.UpdatedAt, cancellationToken);
+
     public void Add(QuestAnswers answers) => db.QuestAnswers.Add(answers);
 }
 
@@ -91,6 +94,14 @@ internal sealed class FeedbackRepository(LearnerDbContext db) : IFeedbackReposit
     public void Add(Feedback feedback) => db.Feedback.Add(feedback);
 }
 
+internal sealed class JobProfileRepository(LearnerDbContext db) : IJobProfileRepository
+{
+    public Task<JobProfileSettings?> FindAsync(Guid learnerId, CancellationToken cancellationToken) =>
+        db.JobProfiles.FirstOrDefaultAsync(j => j.LearnerId == learnerId, cancellationToken);
+
+    public void Add(JobProfileSettings settings) => db.JobProfiles.Add(settings);
+}
+
 internal sealed class TrophyFileRepository(LearnerDbContext db) : ITrophyFileRepository
 {
     public Task<int> CountAsync(Guid learnerId, CancellationToken cancellationToken) =>
@@ -112,7 +123,11 @@ internal sealed class LearnerDataEraser(LearnerDbContext db) : ILearnerDataErase
             .Where(f => f.LearnerId == learnerId)
             .Select(f => f.BlobName)
             .ToListAsync(cancellationToken);
-        return [.. photo, .. files];
+        var cvs = await db.JobProfiles.AsNoTracking()
+            .Where(j => j.LearnerId == learnerId && j.CvBlob != null)
+            .Select(j => j.CvBlob!)
+            .ToListAsync(cancellationToken);
+        return [.. photo, .. files, .. cvs];
     }
 
     public Task EraseAsync(Guid learnerId, CancellationToken cancellationToken) =>
@@ -127,6 +142,7 @@ internal sealed class LearnerDataEraser(LearnerDbContext db) : ILearnerDataErase
             await db.Enrolments.Where(x => x.LearnerId == learnerId).ExecuteDeleteAsync(ct);
             await db.Feedback.Where(x => x.LearnerId == learnerId).ExecuteDeleteAsync(ct);
             await db.TrophyFiles.Where(x => x.LearnerId == learnerId).ExecuteDeleteAsync(ct);
+            await db.JobProfiles.Where(x => x.LearnerId == learnerId).ExecuteDeleteAsync(ct);
             await db.Learners.Where(x => x.Id == learnerId).ExecuteDeleteAsync(ct);
             await transaction.CommitAsync(ct);
         }, cancellationToken);
