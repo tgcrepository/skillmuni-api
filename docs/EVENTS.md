@@ -31,9 +31,9 @@ XP is credited only by Gamification, with ledger key `learnerId + reason + sourc
 | `assessment.island.cleared` | Assessment | learnerId, attempt, island (1–3), firstAttempt | Gamification → +25 when firstAttempt (BR-104), key `assessment:island:{n}` |
 | `assessment.attempt.submitted` | Assessment | learnerId, attempt, firstAttempt, archetypeName, archetypeSummary, topDrivers[] | Gamification → +25 when firstAttempt (BR-105), key `assessment:submitted`, Career Clarity badge progress; Careers → Launchpad mission; Learning → first move "Discover your Career Drivers" |
 | `learning.activity.recorded` | Learning | learnerId, minutes | Gamification → daily quest "Learn for 15 minutes" (BR-118) |
-| `learning.brief.completed` | Learning | learnerId, briefId, moduleSlug | Gamification → badge progress only |
-| `learning.quiz.submitted` | Learning | learnerId, quizId, briefId, moduleSlug, correct, total, firstAttempt | Gamification → +1 per correct on firstAttempt (BR-106), key `quiz:{quizId}`; streak day (§4.4, any submit, learner's local date); daily quest "Score 80%+" |
-| `learning.module.completed` | Learning | learnerId, moduleSlug, courseSlug | Gamification → daily quest "Finish Brain-Vita" when courseSlug = `brain-vita` (B-44); badge progress |
+| `learning.brief.completed` | Learning | learnerId, briefId, moduleSlug, courseSlug, firstCompletion | Gamification → daily quest "Finish Brain-Vita" when courseSlug = `brain-vita` and firstCompletion (B-44); badge progress |
+| `learning.quiz.submitted` | Learning | learnerId, quizId, briefId, moduleSlug, correct, total, firstAttempt | Gamification → +1 per correct on firstAttempt (BR-106), key `quiz:{quizId}`; streak day (§4.4, first-attempt submits only, learner's local date, B-45); daily quest "Score 80%+" |
+| `learning.module.completed` | Learning | learnerId, moduleSlug, courseSlug | Gamification → badge progress |
 | `learning.course.completed` | Learning | learnerId, courseSlug | Gamification → badge progress |
 | `learning.first-moves.claimed` | Learning | learnerId | Gamification → +50 (BR-107), key `first-moves:once` |
 | `careers.application.sent` | Careers | learnerId, applicationId, jobId | Gamification → +100 on the first (BR-111), key `mission:first-application` |
