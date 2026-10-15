@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace Careers.Application.Contracts;
 
 // Shapes match launchpad.api.ts and matches.api.ts (FRONTEND_TYPES.md), serialised camelCase.
@@ -36,7 +38,8 @@ public sealed record FestAlertsToggle(bool On);
 
 // ---- My Matches ----
 
-public sealed record MatchSkillDto(string Name, string Evidence, string? Note);
+/// <summary><c>note?</c> is optional in matches.api.ts: left out when there is none.</summary>
+public sealed record MatchSkillDto(string Name, string Evidence, [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? Note);
 
 public sealed record MatchJobDto(
     string Id,
