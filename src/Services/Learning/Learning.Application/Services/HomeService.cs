@@ -139,17 +139,10 @@ public sealed partial class HomeService(
             Links.Topic(module.Slug, topic.Slug));
     }
 
-    private async Task<LobbyState> GetOrStartAsync(Guid learnerId, CancellationToken cancellationToken)
-    {
-        var state = await lobby.GetAsync(learnerId, cancellationToken);
-        if (state is null)
-        {
-            state = LobbyState.Start(tenant.TenantId, learnerId, clock.GetUtcNow().UtcDateTime);
-            lobby.Add(state);
-        }
-
-        return state;
-    }
+    // Insert-if-absent: assessment.attempt.submitted may be creating the same row right now.
+    private async Task<LobbyState> GetOrStartAsync(Guid learnerId, CancellationToken cancellationToken) =>
+        await lobby.GetAsync(learnerId, cancellationToken)
+        ?? await lobby.GetOrCreateAsync(LobbyState.Start(tenant.TenantId, learnerId, clock.GetUtcNow().UtcDateTime), cancellationToken);
 
     [LoggerMessage(Level = LogLevel.Information, Message = "First-moves bonus collected {LearnerId}")]
     private static partial void LogClaimed(ILogger logger, Guid learnerId);

@@ -45,6 +45,29 @@ internal sealed class QuestAnswersRepository(LearnerDbContext db) : IQuestAnswer
     public Task<DateTime?> LastUpdatedAsync(Guid learnerId, CancellationToken cancellationToken) =>
         db.QuestAnswers.AsNoTracking().Where(a => a.LearnerId == learnerId).MaxAsync(a => (DateTime?)a.UpdatedAt, cancellationToken);
 
+    /// <remarks>Insert-if-absent on <c>ux_quest_answers_learner_slug</c>, then one tracked read (see JobProfileRepository).</remarks>
+    public async Task<QuestAnswers> GetOrCreateAsync(QuestAnswers candidate, CancellationToken cancellationToken)
+    {
+        var existing = await FindAsync(candidate.LearnerId, candidate.Slug, cancellationToken);
+        if (existing is not null)
+        {
+            return existing;
+        }
+
+        var id = candidate.Id.ToString();
+        var learnerId = candidate.LearnerId.ToString();
+        await db.Database.ExecuteSqlAsync(
+            $"""
+            INSERT INTO quest_answers (id, tenant_id, learner_id, slug, answers, updated_at)
+            VALUES ({id}, {candidate.TenantId}, {learnerId}, {candidate.Slug}, {candidate.AnswersJson}, {candidate.UpdatedAt})
+            ON DUPLICATE KEY UPDATE id = id
+            """,
+            cancellationToken);
+
+        return await FindAsync(candidate.LearnerId, candidate.Slug, cancellationToken)
+            ?? throw new InvalidOperationException("The quest answers row was not created.");
+    }
+
     public void Add(QuestAnswers answers) => db.QuestAnswers.Add(answers);
 }
 

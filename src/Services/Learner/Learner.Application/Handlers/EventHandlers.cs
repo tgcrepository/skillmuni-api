@@ -195,13 +195,9 @@ public sealed class CvParsedHandler(
                 continue;
             }
 
-            var record = await answers.FindAsync(e.LearnerId, slug, cancellationToken);
-            if (record is null)
-            {
-                record = QuestAnswers.Start(e.TenantId, e.LearnerId, slug, now);
-                answers.Add(record);
-            }
-
+            // Insert-if-absent: the learner may be saving this quest (or another parse result arriving) right now.
+            var record = await answers.FindAsync(e.LearnerId, slug, cancellationToken)
+                ?? await answers.GetOrCreateAsync(QuestAnswers.Start(e.TenantId, e.LearnerId, slug, now), cancellationToken);
             record.Replace(AnswersJson.Seed(record.AnswersJson, values), now);
         }
     }

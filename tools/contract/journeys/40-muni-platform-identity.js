@@ -370,8 +370,8 @@ module.exports = async (ctx, j) => {
       ['gamification', 'me/progress'],
       ['platform', 'me/notification-preferences'],
     ]) {
+      // Asserted with check (not r.record): some of these GETs aren't frontend calls (e.g. notification preferences).
       const first = await poll(() => ghost.call('GET', path), erasedOk);
-      r.record(j, 'GET', path, first, [401, 410], `${service}: erased learner, token minted before erasure`);
       check(erasedOk(first), `GET ${path} (erased)`, `${service} should answer 410 learner-erased or 401, got ${first.status} ${codeOf(first)}: ${first.text.slice(0, 160)}`);
       check(!first.text.includes('Kumar') && !first.text.includes(ravi.email), `GET ${path} (erased)`, `old personal details survived: ${first.text.slice(0, 200)}`);
     }

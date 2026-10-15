@@ -45,6 +45,33 @@ internal sealed class LobbyRepository(LearningDbContext db) : ILobbyRepository
         db.LobbyStates.FirstOrDefaultAsync(s => s.LearnerId == learnerId, cancellationToken);
 
     public void Add(LobbyState state) => db.LobbyStates.Add(state);
+
+    /// <remarks>
+    /// Insert-if-absent (<c>ON DUPLICATE KEY UPDATE</c> on <c>ux_lobby_states_learner</c>), then one tracked read: the
+    /// Home lobby request and <c>assessment.attempt.submitted</c> often create the row at the same moment.
+    /// Interpolated values are sent as parameters.
+    /// </remarks>
+    public async Task<LobbyState> GetOrCreateAsync(LobbyState candidate, CancellationToken cancellationToken)
+    {
+        var existing = await GetAsync(candidate.LearnerId, cancellationToken);
+        if (existing is not null)
+        {
+            return existing;
+        }
+
+        var id = candidate.Id.ToString();
+        var learnerId = candidate.LearnerId.ToString();
+        await db.Database.ExecuteSqlAsync(
+            $"""
+            INSERT INTO lobby_states (id, tenant_id, learner_id, updated_at)
+            VALUES ({id}, {candidate.TenantId}, {learnerId}, {candidate.UpdatedAt})
+            ON DUPLICATE KEY UPDATE id = id
+            """,
+            cancellationToken);
+
+        return await GetAsync(candidate.LearnerId, cancellationToken)
+            ?? throw new InvalidOperationException("The lobby state row was not created.");
+    }
 }
 
 internal sealed class ActivityRepository(LearningDbContext db) : IActivityRepository

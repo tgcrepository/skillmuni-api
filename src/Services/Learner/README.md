@@ -126,4 +126,6 @@ On `identity.learner.erased` the learner's rows are deleted and a tombstone stay
 
 `job_profiles` has one row per learner (`ux_job_profiles_learner`), created on first use by a request or by
 `cv.parse.completed`. The create is an insert-if-absent (`INSERT … ON DUPLICATE KEY UPDATE`) followed by a read, so
-two parse results (or a parse result and a request) arriving together never hit the unique key.
+two parse results (or a parse result and a request) arriving together never hit the unique key. `quest_answers` rows
+(one per learner and quest, `ux_quest_answers_learner_slug`) are created the same way by quest saves, CV pre-fill and
+applied Job Profile changes.

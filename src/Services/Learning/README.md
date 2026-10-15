@@ -81,3 +81,9 @@ On `identity.learner.erased` the learner's rows are deleted and a tombstone stay
   of recreating an empty row;
 - an event about an erased learner (any event implementing `ILearnerEvent`) delivered late is recorded in the inbox and
   skipped.
+
+## Lobby state row
+
+`lobby_states` holds one row per learner (`ux_lobby_states_learner`), created on first use by the Home lobby request or
+by `assessment.attempt.submitted`. The create is an insert-if-absent (`INSERT … ON DUPLICATE KEY UPDATE`) followed by a
+read, so both arriving together never hit the unique key.

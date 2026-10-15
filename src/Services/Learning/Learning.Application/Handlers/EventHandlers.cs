@@ -22,13 +22,7 @@ public sealed class AssessmentSubmittedHandler(ILobbyRepository lobby, TimeProvi
     public async Task HandleAsync(AssessmentSubmitted e, CancellationToken cancellationToken)
     {
         var now = clock.GetUtcNow().UtcDateTime;
-        var state = await lobby.GetAsync(e.LearnerId, cancellationToken);
-        if (state is null)
-        {
-            state = LobbyState.Start(e.TenantId, e.LearnerId, now);
-            lobby.Add(state);
-        }
-
+        var state = await lobby.GetOrCreateAsync(LobbyState.Start(e.TenantId, e.LearnerId, now), cancellationToken);
         state.MarkAssessmentDone(now);
     }
 }

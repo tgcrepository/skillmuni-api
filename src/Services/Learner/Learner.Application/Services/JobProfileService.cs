@@ -114,12 +114,8 @@ public sealed class JobProfileService(
             .ToList();
         foreach (var group in toApply.GroupBy(c => c.Slug, StringComparer.Ordinal))
         {
-            var record = await answers.FindAsync(who.Id, group.Key, cancellationToken);
-            if (record is null)
-            {
-                record = QuestAnswers.Start(tenant.TenantId, who.Id, group.Key, now);
-                answers.Add(record);
-            }
+            var record = await answers.FindAsync(who.Id, group.Key, cancellationToken)
+                ?? await answers.GetOrCreateAsync(QuestAnswers.Start(tenant.TenantId, who.Id, group.Key, now), cancellationToken);
 
             var json = JsonNode.Parse(record.AnswersJson) as JsonObject ?? new JsonObject();
             foreach (var change in group)

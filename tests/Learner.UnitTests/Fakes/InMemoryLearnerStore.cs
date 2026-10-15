@@ -80,6 +80,17 @@ public sealed class InMemoryLearnerStore :
 
     public void Add(QuestAnswers answers) => Answers.Add(answers);
 
+    public Task<QuestAnswers> GetOrCreateAsync(QuestAnswers candidate, CancellationToken cancellationToken)
+    {
+        var existing = Answers.FirstOrDefault(a => a.LearnerId == candidate.LearnerId && a.Slug == candidate.Slug);
+        if (existing is null)
+        {
+            Answers.Add(candidate);
+        }
+
+        return Task.FromResult(existing ?? candidate);
+    }
+
     public Task<DateTime?> LastUpdatedAsync(Guid learnerId, CancellationToken cancellationToken) =>
         Task.FromResult(Answers.Where(a => a.LearnerId == learnerId).Select(a => (DateTime?)a.UpdatedAt).Max());
 
