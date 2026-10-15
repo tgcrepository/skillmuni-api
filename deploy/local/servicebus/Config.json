@@ -288,6 +288,38 @@
                     }
                   }
                 ]
+              },
+              {
+                "Name": "learning",
+                "Properties": {
+                  "DeadLetteringOnMessageExpiration": false,
+                  "DefaultMessageTimeToLive": "PT24H",
+                  "LockDuration": "PT1M",
+                  "MaxDeliveryCount": 5,
+                  "ForwardDeadLetteredMessagesTo": "",
+                  "ForwardTo": "",
+                  "RequiresSession": false
+                },
+                "Rules": [
+                  {
+                    "Name": "identity-learner-erased",
+                    "Properties": {
+                      "FilterType": "Correlation",
+                      "CorrelationFilter": {
+                        "Label": "identity.learner.erased"
+                      }
+                    }
+                  },
+                  {
+                    "Name": "assessment-attempt-submitted",
+                    "Properties": {
+                      "FilterType": "Correlation",
+                      "CorrelationFilter": {
+                        "Label": "assessment.attempt.submitted"
+                      }
+                    }
+                  }
+                ]
               }
             ]
           }

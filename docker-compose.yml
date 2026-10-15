@@ -1,4 +1,4 @@
-# Local run: gateway + Identity + Learner + CV + Gamification + MySQL + Service Bus emulator + Redis + Azurite.
+# Local run: gateway + Identity + Learner + CV + Gamification + Learning + MySQL + Service Bus emulator + Redis + Azurite.
 #   ./scripts/dev-setup.sh && docker compose up --build
 # Frontend: set environment.apiBaseUrl to /api/v1 and proxy /api to http://localhost:5080.
 name: skillmuni
@@ -13,6 +13,7 @@ services:
       LEARNER_DB_PASSWORD: ${LEARNER_DB_PASSWORD:?run scripts/dev-setup.sh}
       CV_DB_PASSWORD: ${CV_DB_PASSWORD:?run scripts/dev-setup.sh}
       GAMIFICATION_DB_PASSWORD: ${GAMIFICATION_DB_PASSWORD:?run scripts/dev-setup.sh}
+      LEARNING_DB_PASSWORD: ${LEARNING_DB_PASSWORD:?run scripts/dev-setup.sh}
     ports: ["3306:3306"]
     volumes:
       - mysql-data:/var/lib/mysql
@@ -133,11 +134,29 @@ services:
       ServiceBus__ConnectionString: Endpoint=sb://servicebus;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;
       Auth__SigningPublicKeyPem: ${AUTH_PUBLIC_KEY_B64}
 
+  learning:
+    build:
+      context: .
+      dockerfile: src/Services/Learning/Learning.Api/Dockerfile
+    depends_on:
+      mysql:
+        condition: service_healthy
+      servicebus:
+        condition: service_started
+      redis:
+        condition: service_started
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__Learning: server=mysql;port=3306;database=learning;user=learning_svc;password=${LEARNING_DB_PASSWORD}
+      ConnectionStrings__Redis: redis:6379
+      ServiceBus__ConnectionString: Endpoint=sb://servicebus;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;
+      Auth__SigningPublicKeyPem: ${AUTH_PUBLIC_KEY_B64}
+
   gateway:
     build:
       context: .
       dockerfile: src/Gateway/SkillMuni.Gateway/Dockerfile
-    depends_on: [identity, learner, cv, gamification]
+    depends_on: [identity, learner, cv, gamification, learning]
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       Auth__SigningPublicKeyPem: ${AUTH_PUBLIC_KEY_B64}
