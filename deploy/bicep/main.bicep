@@ -1,4 +1,4 @@
-// SkillMuni API platform on Azure: Container Apps (gateway, Identity, Learner, CV, Gamification), MySQL Flexible Server, Service Bus,
+// SkillMuni API platform on Azure: Container Apps (gateway, Identity, Learner, CV, Gamification, Muni, Platform), MySQL Flexible Server, Service Bus,
 // Key Vault, Blob Storage, Document Intelligence, Redis, Container Registry and monitoring. Each app has its own user-assigned managed identity
 // with roles scoped to the single resource it needs (CLAUDE.md §6).
 //
@@ -76,6 +76,23 @@ var gamificationEvents = [
 ]
 var gamificationEventsQuoted = [for e in gamificationEvents: '\'${e}\'']
 
+// Events Muni copies into its learner projection (name, XP totals, finished quests, archetype) or erases on.
+var muniEvents = [
+  'identity.learner.registered'
+  'identity.learner.erased'
+  'gamification.xp.awarded'
+  'learner.quest.completed'
+  'assessment.attempt.submitted'
+]
+var muniEventsQuoted = [for e in muniEvents: '\'${e}\'']
+
+// Events Platform turns into bell notifications or erases on.
+var platformEvents = [
+  'identity.learner.erased'
+  'gamification.badge.earned'
+]
+var platformEventsQuoted = [for e in platformEvents: '\'${e}\'']
+
 // ---------- Monitoring ----------
 resource logs 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
   name: 'log-${prefix}'
@@ -119,6 +136,16 @@ resource gamificationAppId 'Microsoft.ManagedIdentity/userAssignedIdentities@202
 
 resource gatewayAppId 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
   name: 'id-${prefix}-gateway'
+  location: location
+}
+
+resource muniAppId 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
+  name: 'id-${prefix}-muni'
+  location: location
+}
+
+resource platformAppId 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
+  name: 'id-${prefix}-platform'
   location: location
 }
 
@@ -176,6 +203,26 @@ resource acrPullGateway 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   properties: {
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roles.acrPull)
     principalId: gatewayAppId.properties.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
+resource acrPullMuni 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(registry.id, muniAppId.id, roles.acrPull)
+  scope: registry
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roles.acrPull)
+    principalId: muniAppId.properties.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
+resource acrPullPlatform 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(registry.id, platformAppId.id, roles.acrPull)
+  scope: registry
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roles.acrPull)
+    principalId: platformAppId.properties.principalId
     principalType: 'ServicePrincipal'
   }
 }
@@ -244,6 +291,26 @@ resource vaultGateway 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   }
 }
 
+resource vaultMuni 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(vault.id, muniAppId.id, roles.keyVaultSecretsUser)
+  scope: vault
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roles.keyVaultSecretsUser)
+    principalId: muniAppId.properties.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
+resource vaultPlatform 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(vault.id, platformAppId.id, roles.keyVaultSecretsUser)
+  scope: vault
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roles.keyVaultSecretsUser)
+    principalId: platformAppId.properties.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
 // ---------- MySQL Flexible Server: one server, one schema per service ----------
 resource mysqlServerId 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
   name: 'id-${prefix}-mysql'
@@ -308,6 +375,18 @@ resource cvDatabase 'Microsoft.DBforMySQL/flexibleServers/databases@2023-12-30' 
 resource gamificationDatabase 'Microsoft.DBforMySQL/flexibleServers/databases@2023-12-30' = {
   parent: mysql
   name: 'gamification'
+  properties: { charset: 'utf8mb4', collation: 'utf8mb4_0900_ai_ci' }
+}
+
+resource muniDatabase 'Microsoft.DBforMySQL/flexibleServers/databases@2023-12-30' = {
+  parent: mysql
+  name: 'muni'
+  properties: { charset: 'utf8mb4', collation: 'utf8mb4_0900_ai_ci' }
+}
+
+resource platformDatabase 'Microsoft.DBforMySQL/flexibleServers/databases@2023-12-30' = {
+  parent: mysql
+  name: 'platform'
   properties: { charset: 'utf8mb4', collation: 'utf8mb4_0900_ai_ci' }
 }
 
@@ -477,6 +556,75 @@ resource gamificationReceivesEvents 'Microsoft.Authorization/roleAssignments@202
   }
 }
 
+resource muniSubscription 'Microsoft.ServiceBus/namespaces/topics/subscriptions@2022-10-01-preview' = {
+  parent: eventsTopic
+  name: 'muni'
+  properties: {
+    maxDeliveryCount: 10
+    lockDuration: 'PT1M'
+    deadLetteringOnMessageExpiration: true
+  }
+}
+
+resource muniSubscriptionFilter 'Microsoft.ServiceBus/namespaces/topics/subscriptions/rules@2022-10-01-preview' = {
+  parent: muniSubscription
+  name: '$Default'
+  properties: {
+    filterType: 'SqlFilter'
+    sqlFilter: { sqlExpression: 'sys.Label IN (${join(muniEventsQuoted, ', ')})' }
+  }
+}
+
+resource muniReceivesEvents 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(muniSubscription.id, muniAppId.id, roles.serviceBusDataReceiver)
+  scope: muniSubscription
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roles.serviceBusDataReceiver)
+    principalId: muniAppId.properties.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
+resource platformSubscription 'Microsoft.ServiceBus/namespaces/topics/subscriptions@2022-10-01-preview' = {
+  parent: eventsTopic
+  name: 'platform'
+  properties: {
+    maxDeliveryCount: 10
+    lockDuration: 'PT1M'
+    deadLetteringOnMessageExpiration: true
+  }
+}
+
+resource platformSubscriptionFilter 'Microsoft.ServiceBus/namespaces/topics/subscriptions/rules@2022-10-01-preview' = {
+  parent: platformSubscription
+  name: '$Default'
+  properties: {
+    filterType: 'SqlFilter'
+    sqlFilter: { sqlExpression: 'sys.Label IN (${join(platformEventsQuoted, ', ')})' }
+  }
+}
+
+resource platformReceivesEvents 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(platformSubscription.id, platformAppId.id, roles.serviceBusDataReceiver)
+  scope: platformSubscription
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roles.serviceBusDataReceiver)
+    principalId: platformAppId.properties.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
+// Platform reads the notifications queue Identity sends codes and links to (B-09).
+resource platformReceivesNotifications 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(notificationsQueue.id, platformAppId.id, roles.serviceBusDataReceiver)
+  scope: notificationsQueue
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roles.serviceBusDataReceiver)
+    principalId: platformAppId.properties.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
 // ---------- Blob Storage (profile photos, certificate files, CVs): private, Entra-only ----------
 resource storage 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   name: 'st${take(compact, 22)}'
@@ -608,6 +756,28 @@ resource redisAccessGamification 'Microsoft.Cache/redis/accessPolicyAssignments@
     accessPolicyName: 'Data Contributor'
     objectId: gamificationAppId.properties.principalId
     objectIdAlias: 'ca-gamification'
+  }
+}
+
+resource redisAccessMuni 'Microsoft.Cache/redis/accessPolicyAssignments@2024-03-01' = {
+  parent: redis
+  name: 'ca-muni'
+  dependsOn: [redisAccessGamification] // Redis applies one access-policy change at a time.
+  properties: {
+    accessPolicyName: 'Data Contributor'
+    objectId: muniAppId.properties.principalId
+    objectIdAlias: 'ca-muni'
+  }
+}
+
+resource redisAccessPlatform 'Microsoft.Cache/redis/accessPolicyAssignments@2024-03-01' = {
+  parent: redis
+  name: 'ca-platform'
+  dependsOn: [redisAccessMuni] // Redis applies one access-policy change at a time.
+  properties: {
+    accessPolicyName: 'Data Contributor'
+    objectId: platformAppId.properties.principalId
+    objectIdAlias: 'ca-platform'
   }
 }
 
@@ -770,7 +940,63 @@ module gatewayApp 'modules/container-app.bicep' = {
       { name: 'ReverseProxy__Clusters__learner__Destinations__primary__Address', value: 'http://ca-learner/' }
       { name: 'ReverseProxy__Clusters__cv__Destinations__primary__Address', value: 'http://ca-cv/' }
       { name: 'ReverseProxy__Clusters__gamification__Destinations__primary__Address', value: 'http://ca-gamification/' }
+      { name: 'ReverseProxy__Clusters__muni__Destinations__primary__Address', value: 'http://ca-muni/' }
+      { name: 'ReverseProxy__Clusters__platform__Destinations__primary__Address', value: 'http://ca-platform/' }
     ], originEnv)
+  }
+}
+
+module muniApp 'modules/container-app.bicep' = {
+  name: 'ca-muni'
+  dependsOn: [acrPullMuni, vaultMuni, muniReceivesEvents, redisAccessMuni]
+  params: {
+    name: 'ca-muni'
+    location: location
+    environmentId: apps.id
+    identityId: muniAppId.id
+    identityClientId: muniAppId.properties.clientId
+    image: '${registry.properties.loginServer}/skillmuni-muni:${imageTag}'
+    registryServer: registry.properties.loginServer
+    externalIngress: false
+    minReplicas: isProd ? 2 : 1
+    secrets: [
+      { name: 'muni-db', keyVaultUrl: '${vault.properties.vaultUri}secrets/muni-db-connection', identity: muniAppId.id }
+      { name: 'auth-public-key', keyVaultUrl: '${vault.properties.vaultUri}secrets/auth-signing-public-key', identity: muniAppId.id }
+    ]
+    env: concat(commonEnv, [
+      { name: 'ConnectionStrings__Muni', secretRef: 'muni-db' }
+      { name: 'Muni__LearnerBaseAddress', value: 'http://ca-learner/' }
+      { name: 'Auth__SigningPublicKeyPem', secretRef: 'auth-public-key' }
+      { name: 'ServiceBus__FullyQualifiedNamespace', value: '${bus.name}.servicebus.windows.net' }
+      { name: 'ServiceBus__Subscription', value: muniSubscription.name }
+    ])
+  }
+}
+
+module platformApp 'modules/container-app.bicep' = {
+  name: 'ca-platform'
+  dependsOn: [acrPullPlatform, vaultPlatform, platformReceivesEvents, platformReceivesNotifications, redisAccessPlatform]
+  params: {
+    name: 'ca-platform'
+    location: location
+    environmentId: apps.id
+    identityId: platformAppId.id
+    identityClientId: platformAppId.properties.clientId
+    image: '${registry.properties.loginServer}/skillmuni-platform:${imageTag}'
+    registryServer: registry.properties.loginServer
+    externalIngress: false
+    minReplicas: isProd ? 2 : 1
+    secrets: [
+      { name: 'platform-db', keyVaultUrl: '${vault.properties.vaultUri}secrets/platform-db-connection', identity: platformAppId.id }
+      { name: 'auth-public-key', keyVaultUrl: '${vault.properties.vaultUri}secrets/auth-signing-public-key', identity: platformAppId.id }
+    ]
+    env: concat(commonEnv, [
+      { name: 'ConnectionStrings__Platform', secretRef: 'platform-db' }
+      { name: 'Auth__SigningPublicKeyPem', secretRef: 'auth-public-key' }
+      { name: 'ServiceBus__FullyQualifiedNamespace', value: '${bus.name}.servicebus.windows.net' }
+      { name: 'ServiceBus__Subscription', value: platformSubscription.name }
+      { name: 'ServiceBus__NotificationsQueue', value: notificationsQueue.name }
+    ])
   }
 }
 
